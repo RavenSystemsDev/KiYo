@@ -46,6 +46,11 @@ KiYo is a macOS utility by [Raven Systems](https://ravensystems.io/) that correc
 
 Notch mode: the compact icon and expanded panel. MacBook placement illustration using an actual KiYo screenshot.
 
+<p align="center">
+  <img src="Docs/images/settings.png" width="480" alt="KiYo settings">
+</p>
+<p align="center"><em>Settings: launch at login, text correction, exceptions and keyboard shortcuts</em></p>
+
 <details>
 <summary>User guide and About KiYo</summary>
 
