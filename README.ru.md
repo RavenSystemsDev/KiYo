@@ -36,6 +36,26 @@
 
 Обратная связь из настроек: письмо об ошибке или предложении на dev@ravensystems.io, которое отправляет сам пользователь.
 
+## Как выглядит KiYo
+
+<p align="center">
+  <img src="Docs/images/notch-preview.png" width="960" alt="KiYo у чёлки MacBook: свёрнуто и раскрыто">
+</p>
+
+Режим чёлки: островок с иконкой и раскрытая панель. Иллюстрация размещения на экране MacBook с настоящим скриншотом KiYo.
+
+<details>
+<summary>Инструкция и «О KiYo»</summary>
+
+<p align="center">
+  <img src="Docs/images/guide.png" width="480" alt="Инструкция KiYo">
+</p>
+<p align="center">
+  <img src="Docs/images/about.png" width="480" alt="О KiYo — Raven Systems">
+</p>
+
+</details>
+
 ## Сборка
 
 Нужен Mac на Apple Silicon с macOS 13+ и инструментами разработчика Apple. Для проверки публикации нужен Python 3. Реальная проверка текущего поведения выполнена на macOS 26.6.2; другие версии требуют проверки.
