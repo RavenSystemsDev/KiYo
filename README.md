@@ -38,6 +38,26 @@ KiYo is a macOS utility by [Raven Systems](https://ravensystems.io/) that correc
 - Optional preferences and exceptions sync through a user-selected folder, including iCloud Drive.
 - Bug reports and feature requests from Settings open an email to dev@ravensystems.io; sending remains under your control.
 
+## See KiYo in action
+
+<p align="center">
+  <img src="Docs/images/notch-preview.png" width="960" alt="KiYo at the MacBook notch: collapsed and expanded">
+</p>
+
+Notch mode: the compact icon and expanded panel. MacBook placement illustration using an actual KiYo screenshot.
+
+<details>
+<summary>User guide and About KiYo</summary>
+
+<p align="center">
+  <img src="Docs/images/guide.png" width="480" alt="KiYo user guide">
+</p>
+<p align="center">
+  <img src="Docs/images/about.png" width="480" alt="About KiYo — Raven Systems">
+</p>
+
+</details>
+
 ## Requirements and build
 
 Apple Silicon Mac, macOS 13+, Apple command-line developer tools with Swift, and Python 3 for the publication audit. Runtime behavior has been tested on macOS 26.6.2; older supported deployment versions need testing.
