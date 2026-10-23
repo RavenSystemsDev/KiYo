@@ -6,7 +6,7 @@ kiyo_build_tmp=$(mktemp -d "${TMPDIR:-/tmp}/kiyo-build.XXXXXX")
 trap 'rm -rf "$kiyo_build_tmp"' EXIT
 kiyo_app="$kiyo_build_tmp/Kiyo.app"
 mkdir -p "$kiyo_app/Contents/MacOS" "$kiyo_app/Contents/Resources" dist
-swiftc -O -module-cache-path "$kiyo_build_tmp/modules" Sources/main.swift Sources/PreferencesSync.swift Sources/SingleInstance.swift Sources/SelectionConversion.swift -o "$kiyo_app/Contents/MacOS/KiyoSwitchet" -framework ServiceManagement -framework AppKit -framework Carbon -framework ApplicationServices -target arm64-apple-macosx13.0
+swiftc -O -module-cache-path "$kiyo_build_tmp/modules" Sources/main.swift Sources/PreferencesSync.swift Sources/SingleInstance.swift Sources/SelectionConversion.swift Sources/VisibleWord.swift -o "$kiyo_app/Contents/MacOS/KiyoSwitchet" -framework ServiceManagement -framework AppKit -framework Carbon -framework ApplicationServices -target arm64-apple-macosx13.0
 cp Resources/Info.plist "$kiyo_app/Contents/Info.plist"
 cp Resources/AppIcon.icns Resources/LogoTemplate.png Resources/PrivacyInfo.xcprivacy "$kiyo_app/Contents/Resources/"
 cp -R Resources/ru.lproj Resources/en.lproj "$kiyo_app/Contents/Resources/"

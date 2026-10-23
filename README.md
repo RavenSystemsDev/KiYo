@@ -18,6 +18,7 @@ KiYo is a macOS utility by [Raven Systems](https://ravensystems.io/) that correc
 - Notch or menu-bar display, pause, manual correction and opt-in launch at login.
 - Russian/English interface, welcome screen and a separate user guide.
 - Optional preferences and exceptions sync through a user-selected folder, including iCloud Drive.
+- Bug reports and feature requests from Settings open an email to dev@ravensystems.io; sending remains under your control.
 
 ## Requirements and build
 

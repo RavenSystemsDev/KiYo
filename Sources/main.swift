@@ -316,6 +316,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var testExcludedWords: Set<String>?
     var testShortcutID: String?
     var testSelection: String?
+    var testVisibleWord: String?
     var shortcutRecordingKey = "exclusionShortcut"
     var selectionEpoch = 0
     var testConversionShortcutID: String?
@@ -358,6 +359,17 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var notchWidth: CGFloat = 180
     var pendingLayoutChange: (russian: Bool, until: Date)?
     var layoutBufferResets = 0
+    var focusErrorCode = 0
+    var lastProtection = "none"
+    var wordDecisions: [[String: Any]] = []
+    func recordWordDecision(_ decision: String) {
+        guard CommandLine.arguments.contains("--diagnostics"), !buffer.isEmpty else { return }
+        wordDecisions.append(["length": buffer.count, "russian": LayoutConverter.russian(buffer), "observedRussian": currentRussian, "decision": decision])
+        if wordDecisions.count > 12 { wordDecisions.removeFirst() }
+    }
+    var selectionRequests = 0
+    var selectionStatus = "idle"
+    var accessibilityPreparedAt: [pid_t: Date] = [:]
     var skippedReasons: [String: Int] = [:]
     func recordSkip(_ reason: String) { skippedReasons[reason, default: 0] += 1 }
     var currentRussian = false
@@ -418,6 +430,8 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         configureAppMenu()
         if CommandLine.arguments.contains("--settings") { showSettings() }
         NotificationCenter.default.addObserver(self, selector: #selector(screenChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(frontApplicationChanged(_:)), name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        prepareAccessibility(pid: NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0)
         startListening(prompt: false)
         preferencesSync.onApply = { [weak self] in self?.applySyncedPreferences() }
         preferencesSync.onStatus = { [weak self] in self?.updateSyncStatus() }
@@ -462,10 +476,17 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         (panel.contentView as? NotchView)?.roundTop = usesMenuBar
         if usesMenuBar {
             if statusItem == nil {
+                // Seed AppKit’s saved position once; preserve subsequent user placement.
+                let positionKey = "NSStatusItem Preferred Position KiYo.Status"
+                if UserDefaults.standard.object(forKey: positionKey) == nil {
+                    UserDefaults.standard.set(0, forKey: positionKey)
+                }
                 let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+                item.autosaveName = "KiYo.Status"
+                item.isVisible = true
                 if let button = item.button {
                     let icon = notchLogo()
-                    icon.size = NSSize(width: 18, height: 20)
+                    icon.size = NSSize(width: 16, height: 18)
                     button.image = icon
                     button.target = self
                     button.action = #selector(statusItemClicked(_:))
@@ -580,6 +601,9 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         return image
     }
     func render() {
+        let statusDescription = tap == nil ? tr("нужен доступ к клавиатуре", "keyboard access required") : enabled ? tr("автосмена включена", "automatic correction on") : tr("пауза", "paused")
+        statusItem?.button?.toolTip = "KiYo — " + statusDescription
+        statusItem?.button?.setAccessibilityValue(statusDescription)
         guard !animating else { return }
         panel.contentView?.subviews.forEach { $0.removeFromSuperview() }
         let head = NSButton(title: "", target: self, action: #selector(expand))
@@ -632,7 +656,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let window = settingsWindow else { return }
         window.title = ""
         window.titleVisibility = .hidden
-        let root = ContentView(frame: NSRect(x: 0, y: 0, width: 480, height: 626))
+        let root = ContentView(frame: NSRect(x: 0, y: 0, width: 480, height: 662))
         window.contentView = root
         func group(_ title: String, y: CGFloat, height: CGFloat) -> ContentView {
             let box = NSBox(frame: NSRect(x: 20, y: y, width: 440, height: height))
@@ -671,7 +695,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             control.target = self; control.action = action
             return control
         }
-        let general = group("", y: 12, height: 558)
+        let general = group("", y: 12, height: 594)
         let languages = NSPopUpButton()
         languages.controlSize = .large
         languages.addItems(withTitles: [tr("Системный", "System default"), "Русский", "English"])
@@ -716,14 +740,18 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let guide = NSButton(title: tr("Открыть", "Open"), target: self, action: #selector(showGuide))
         guide.bezelStyle = .rounded
         row(general, tr("Инструкция", "User guide"), y: 450, control: guide)
+        let feedback = NSButton(title: tr("Написать…", "Send feedback…"), target: self, action: #selector(showFeedback))
+        feedback.bezelStyle = .rounded
+        feedback.toolTip = tr("Сообщить об ошибке или предложить функцию: dev@ravensystems.io", "Report a bug or suggest a feature: dev@ravensystems.io")
+        row(general, tr("Ошибка или идея?", "Bug or idea?"), y: 486, control: feedback)
         let sync = NSButton(title: preferencesSync.connected ? tr("Отключить", "Disconnect") : tr("Подключить…", "Connect…"), target: self, action: #selector(configureSync))
         sync.bezelStyle = .rounded
         syncButton = sync
-        row(general, tr("iCloud Drive", "iCloud Drive"), y: 486, control: sync)
+        row(general, tr("iCloud Drive", "iCloud Drive"), y: 522, control: sync)
         let syncInfo = NSTextField(labelWithString: "")
         syncInfo.font = .systemFont(ofSize: 11)
         syncInfo.textColor = .secondaryLabelColor
-        syncInfo.frame = NSRect(x: 16, y: 526, width: 408, height: 18)
+        syncInfo.frame = NSRect(x: 16, y: 562, width: 408, height: 18)
         general.addSubview(syncInfo)
         syncStatusLabel = syncInfo
         updateSyncStatus()
@@ -731,17 +759,17 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         access.textColor = .secondaryLabelColor
         access.font = .systemFont(ofSize: 11)
         access.alignment = .center
-        access.frame = NSRect(x: 110, y: 592, width: 260, height: 20)
+        access.frame = NSRect(x: 110, y: 628, width: 260, height: 20)
         root.addSubview(access)
         let permissions = NSButton(title: tr("Разрешения…", "Permissions…"), target: self, action: #selector(permissions))
         permissions.bezelStyle = .rounded
         permissions.controlSize = .small
-        permissions.frame = NSRect(x: 366, y: 586, width: 94, height: 28)
+        permissions.frame = NSRect(x: 366, y: 622, width: 94, height: 28)
         root.addSubview(permissions)
         let quit = NSButton(title: tr("Завершить", "Quit"), target: self, action: #selector(quit))
         quit.bezelStyle = .rounded
         quit.controlSize = .small
-        quit.frame = NSRect(x: 20, y: 586, width: 90, height: 28)
+        quit.frame = NSRect(x: 20, y: 622, width: 90, height: 28)
         root.addSubview(quit)
     }
     @objc func editExceptions() {
@@ -788,22 +816,46 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         buffer = ""
         cancelExceptions()
     }
+    @objc func frontApplicationChanged(_ notification: Notification) {
+        if let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
+            prepareAccessibility(pid: application.processIdentifier)
+        }
+    }
+    func prepareAccessibility(pid: pid_t) {
+        guard pid > 0, pid != ProcessInfo.processInfo.processIdentifier, AXIsProcessTrusted() else { return }
+        let now = Date()
+        if let last = accessibilityPreparedAt[pid], now.timeIntervalSince(last) < 10 { return }
+        accessibilityPreparedAt = accessibilityPreparedAt.filter { now.timeIntervalSince($0.value) < 600 }
+        accessibilityPreparedAt[pid] = now
+        DispatchQueue.global(qos: .utility).async {
+            let app = AXUIElementCreateApplication(pid)
+            AXUIElementSetMessagingTimeout(app, 0.1)
+            // Electron documents this opt-in for third-party assistive apps.
+            AXUIElementSetAttributeValue(app, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+        }
+    }
     func protectedField(pid: pid_t) -> Bool {
         if testOutput != nil { return testProtectedField }
-        if pid == ProcessInfo.processInfo.processIdentifier { return true }
+        if pid == ProcessInfo.processInfo.processIdentifier { lastProtection = "ownApp"; return true }
         let application = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(application, 0.01)
         var focused: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(application, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
-              let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { return true }
+        let focusResult = AXUIElementCopyAttributeValue(application, kAXFocusedUIElementAttribute as CFString, &focused)
+        focusErrorCode = Int(focusResult.rawValue)
+        guard focusResult == .success, let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else {
+            lastProtection = "focusUnavailable"
+            prepareAccessibility(pid: pid)
+            return true
+        }
         let element = focused as! AXUIElement
         AXUIElementSetMessagingTimeout(element, 0.01)
         for attribute in [kAXSubroleAttribute, kAXRoleDescriptionAttribute, kAXPlaceholderValueAttribute] {
             var value: CFTypeRef?
             AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
             let text = (value as? String ?? "").lowercased()
-            if text.contains("secure") || text.contains("password") || text.contains("парол") || text.contains("email") || text.contains("e-mail") || text.contains("электронн") { return true }
+            if text.contains("secure") || text.contains("password") || text.contains("парол") || text.contains("email") || text.contains("e-mail") || text.contains("электронн") { lastProtection = "secureOrEmail"; return true }
         }
+        lastProtection = "none"
         return false
     }
     func finishShortcutRecording(_ value: String?) {
@@ -1153,6 +1205,30 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         scroll.documentView = editor; window.contentView = scroll
         NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil)
     }
+    @objc func showFeedback() {
+        guard let window = settingsWindow else { return }
+        let alert = NSAlert()
+        alert.messageText = tr("Нашли ошибку или есть идея?", "Found a bug or have an idea?")
+        alert.informativeText = tr("Откроется письмо на dev@ravensystems.io. Опишите проблему и шаги для её повторения или предложите новую функцию. Письмо отправляете вы; данные автоматически не прикладываются.", "Your email app will open a message to dev@ravensystems.io. Describe the problem and steps to reproduce it, or suggest a feature. You send the message yourself; no data is attached automatically.")
+        alert.addButton(withTitle: tr("Ошибка", "Bug report"))
+        alert.addButton(withTitle: tr("Предложение", "Feature request"))
+        alert.addButton(withTitle: tr("Отмена", "Cancel"))
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn || response == .alertSecondButtonReturn else { return }
+            let subject = response == .alertFirstButtonReturn ? "KiYo — Bug report" : "KiYo — Feature request"
+            var components = URLComponents()
+            components.scheme = "mailto"
+            components.path = "dev@ravensystems.io"
+            components.queryItems = [URLQueryItem(name: "subject", value: subject)]
+            guard let url = components.url, NSWorkspace.shared.open(url) else {
+                let failure = NSAlert()
+                failure.messageText = self.tr("Напишите на dev@ravensystems.io", "Email dev@ravensystems.io")
+                failure.informativeText = self.tr("Не удалось открыть почтовое приложение. Тема письма: ", "Could not open your email app. Subject: ") + subject
+                failure.beginSheetModal(for: window)
+                return
+            }
+        }
+    }
     @objc func showGuide() {
         if guideWindow == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 580), styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -1270,7 +1346,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     @objc func showSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 626), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 662), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
             window.delegate = self
             window.center()
@@ -1343,7 +1419,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     func writeHealth() {
         guard CommandLine.arguments.contains("--diagnostics") else { return }
-        let health: [String: Any] = ["accessibility": AXIsProcessTrusted(), "eventTap": tap != nil, "secureInput": IsSecureEventInputEnabled(), "pid": ProcessInfo.processInfo.processIdentifier, "observedKeys": observedKeys, "observedLetters": observedLetters, "corrections": corrections, "layoutChanges": layoutChanges, "enabled": enabled, "bufferLength": buffer.count, "callbackMaximumMS": callbackMaximumMS, "tapTimeouts": tapTimeouts, "eventTapEnabled": tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false, "layoutBufferResets": layoutBufferResets, "pendingAutomaticLayout": pendingLayoutChange != nil, "skippedReasons": skippedReasons]
+        let barFrame = statusItem?.button?.window?.frame ?? .zero
+        let visibleLogoLeft = barFrame.midX - (statusItem?.button?.image?.size.width ?? 0) / 2
+        let buttonRect = statusItem?.button.map { $0.convert($0.bounds, to: nil) } ?? .zero
+        let buttonScreenRect = statusItem?.button?.window?.convertToScreen(buttonRect) ?? .zero
+        let health: [String: Any] = ["statusButtonFrame": ["x": buttonScreenRect.minX, "width": buttonScreenRect.width], "statusLogoLeft": visibleLogoLeft, "statusImageWidth": statusItem?.button?.image?.size.width ?? 0, "statusItemPresent": statusItem != nil, "statusItemVisible": statusItem?.isVisible ?? false, "statusWindowVisible": statusItem?.button?.window?.isVisible ?? false, "statusFrame": ["x": barFrame.minX, "y": barFrame.minY, "width": barFrame.width, "height": barFrame.height], "screenWidth": NSScreen.main?.frame.width ?? 0, "notchRightStart": NSScreen.main?.auxiliaryTopRightArea?.minX ?? 0, "accessibility": AXIsProcessTrusted(), "eventTap": tap != nil, "secureInput": IsSecureEventInputEnabled(), "pid": ProcessInfo.processInfo.processIdentifier, "observedKeys": observedKeys, "observedLetters": observedLetters, "corrections": corrections, "layoutChanges": layoutChanges, "enabled": enabled, "bufferLength": buffer.count, "callbackMaximumMS": callbackMaximumMS, "tapTimeouts": tapTimeouts, "eventTapEnabled": tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false, "layoutBufferResets": layoutBufferResets, "pendingAutomaticLayout": pendingLayoutChange != nil, "skippedReasons": skippedReasons, "focusErrorCode": focusErrorCode, "lastProtection": lastProtection, "selectionRequests": selectionRequests, "selectionStatus": selectionStatus, "wordDecisions": wordDecisions]
         guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
         let folder = base.appendingPathComponent("local.kiyo.switchet", isDirectory: true)
         do {
@@ -1399,6 +1479,8 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if event.getIntegerValueField(.keyboardEventKeycode) != 51 || !event.flags.intersection([.maskControl, .maskCommand, .maskAlternate]).isEmpty { correctionRejections.cancel() }
         let shortcutPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
         if ExclusionShortcut.matches(testConversionShortcutID ?? UserDefaults.standard.string(forKey: "convertSelectionShortcut") ?? "ctrlOptR", key: event.getIntegerValueField(.keyboardEventKeycode), flags: event.flags) {
+            selectionRequests += 1
+            selectionStatus = "shortcutReceived"
             buffer = ""
             ignoringLongToken = false
             guard !IsSecureEventInputEnabled(), !protectedField(pid: shortcutPID) else { return false }
@@ -1436,6 +1518,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let text = length > 0 ? String(utf16CodeUnits: chars, count: length) : translatedKey(event)
         if [" ", "\n", "\r", "\t"].contains(text) {
             if ignoringLongToken { buffer = ""; ignoringLongToken = false; return false }
+            let visible = testOutput != nil ? testVisibleWord : VisibleWord.beforeCaret(pid: pid, expectedUTF16Count: buffer.utf16.count)
+            if let visible, visible != buffer, visible.utf16.count == buffer.utf16.count {
+                recordSkip("visibleWordMismatch")
+                buffer = visible
+            }
             let minimum = sensitivity == 0 ? 4 : 2
             let preserving = correctionRejections.consumePreservation(buffer)
             let protected = ExclusionRules.protectedToken(buffer, words: excludedWords)
@@ -1447,7 +1534,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     return replace(with: fixed, suffix: text, pid: pid, changeLayout: false, delimiter: event)
                 }
             }
-            if !buffer.isEmpty { recordSkip(preserving ? "retryPreserved" : protected ? "excludedOrAddress" : "noSuggestion") }
+            if !buffer.isEmpty {
+                let reason = preserving ? "retryPreserved" : protected ? "excludedOrAddress" : "noSuggestion"
+                recordSkip(reason)
+                recordWordDecision(reason)
+            }
             buffer = ""
             ignoringLongToken = false
         } else if !text.isEmpty && text.unicodeScalars.allSatisfy({ !CharacterSet.whitespacesAndNewlines.contains($0) && !CharacterSet.controlCharacters.contains($0) }) {
@@ -1474,6 +1565,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     @discardableResult
     func replace(with text: String, suffix: String, pid: pid_t, changeLayout: Bool = true, delimiter: CGEvent? = nil) -> Bool {
+        recordWordDecision(changeLayout ? "layoutCorrection" : "spellingCorrection")
         let original = buffer
         buffer = ""
         guard testOutput != nil || NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { return false }
