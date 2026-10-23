@@ -1,0 +1,98 @@
+KiYo — сведения о компонентах и правах
+
+Разработчик: Raven Systems — https://ravensystems.io/
+
+В проверенном дереве проекта не обнаружены сторонние пакеты, менеджеры зависимостей или включённые сторонние SDK. Приложение написано на Swift и использует системные фреймворки Apple: AppKit, Foundation, Carbon, ApplicationServices, QuartzCore и ServiceManagement. Системные словари и предложения орфографии предоставляет macOS; их содержимое не копируется в приложение.
+
+Названия технологий во встроенном списке слов используются как текст для распознавания раскладки. Приложение не включает код перечисленных продуктов.
+
+Значок панели KiYo использует монохромный PNG с прозрачным фоном. В интерфейсе используются системные символы SF Symbols и шрифты macOS; файлы системных шрифтов не поставляются отдельно. Растровая иконка приложения включена как AppIcon.icns.
+
+Apple, macOS, iCloud и другие названия принадлежат соответствующим правообладателям. Упоминания не означают их одобрения или участия в разработке.
+
+Исходный код KiYo доступен по KiYo Source-Available License 1.0. Компаниям разрешено внутреннее использование. Платное распространение KiYo и производных версий без отдельного письменного разрешения запрещено. В распространяемых приложениях обязательны видимое авторство Raven Systems и ссылка https://ravensystems.io/ . Это не стандартная open-source лицензия.
+
+KiYo Source-Available License 1.0
+
+Copyright (c) 2026 Raven Systems
+Creator and project attribution: Raven Systems — https://ravensystems.io/
+
+1. Scope
+
+This license applies to the KiYo source code, accompanying documentation and
+other project material for which Raven Systems is entitled to grant permission
+and which is supplied under this license (the "Software"). "Modified Versions"
+includes modified, renamed or derivative versions and applications incorporating
+a substantial part of the Software. Third-party components and Apple system
+frameworks remain subject to their own applicable terms.
+
+2. Permitted use
+
+Subject to these conditions, you may inspect, audit, copy, compile, run and
+modify the Software. Individuals and organizations, including commercial
+companies, may use the Software internally and in the course of their work.
+Using KiYo as a tool while performing paid work is permitted; this does not
+authorize selling KiYo or its functionality to customers.
+
+You may redistribute the Software and Modified Versions, in source or binary
+form, only free of charge and in compliance with this license.
+
+3. No paid distribution or paid access
+
+This license does not permit selling, licensing for a fee, renting or otherwise
+charging for the Software or Modified Versions. It does not permit paid
+subscriptions, paid unlocks, paid access or a paid hosted offering that sells
+the Software's functionality. You may not bypass this restriction by renaming
+the Software or including it in a paid software bundle.
+
+Separately provided support, training or consulting is permitted only when
+payment is not required to obtain, use or retain the Software and is not a
+charge for a copy, license or access to the Software.
+
+Any rights to paid distribution or paid access require separate written
+permission from Raven Systems. No such permission is granted by this license.
+
+4. Visible creator attribution
+
+Every redistributed application containing the Software or a Modified Version
+must visibly identify KiYo as the original project and Raven Systems as its
+creator, and display https://ravensystems.io/ . The link must be clickable in
+interfaces that support links. Attribution must be readily accessible to normal
+users in About, Credits, Help or an equivalent screen; an entry only in source
+code, a hidden file or a developer log is not sufficient.
+
+For a command-line or non-graphical distribution, include the attribution and
+URL in the normal help output and accompanying user documentation.
+
+A suitable notice for a derivative application is:
+"Based on KiYo by Raven Systems — https://ravensystems.io/"
+
+5. Preservation of notices and truthful identification
+
+Redistributions must include this license and preserve the copyright and
+creator notices. Clearly identify material modifications and do not represent
+unofficial versions as releases published or endorsed by Raven Systems.
+This license does not grant a right to imply endorsement or ownership of the
+Raven Systems identity, name or branding.
+
+6. Rights not granted
+
+Rights not expressly granted are reserved. This is a source-available license
+with restrictions on paid distribution and mandatory visible attribution. It
+is not the MIT, Apache or GNU GPL license, and it is not an OSI-approved
+open-source license. Publication of source does not waive these conditions.
+
+7. Breach
+
+The permissions granted by this license terminate if you fail to comply with
+its conditions. Rights under a separate written agreement are governed by
+that agreement.
+
+8. No warranty; limitation of liability
+
+To the extent permitted by applicable law, the Software is provided "AS IS",
+without warranties of any kind, express or implied, including merchantability,
+fitness for a particular purpose and noninfringement. To that extent, Raven
+Systems and contributors are not liable for claims, damages or other liability
+arising from the Software or its use. Nothing in this license excludes rights
+or liabilities that applicable law does not permit to be excluded.

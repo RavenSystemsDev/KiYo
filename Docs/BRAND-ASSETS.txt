@@ -1,0 +1,13 @@
+KiYo brand assets
+
+AppIcon.png is the approved glossy black app tile with white Ki/Yo lettering and a fully connected K. AppIcon.icns contains macOS icon sizes derived from it.
+LogoTemplate.png contains black lettering on genuine transparency, with a transparent o counter and gaps. AppKit treats it as a template and supplies the appropriate tint in the notch, menu bar, welcome screen and expanded panel.
+
+These are AI-assisted raster assets prepared and approved for this project. They are not a font file or a bundled third-party icon library. The original source logo and project identity belong to the project materials supplied by the maintainer. Code/asset distribution follows LICENSE where the maintainer is entitled to grant permission.
+
+Image editing used the built-in imagegen tool. Approved edit prompt:
+"Make the white K a single connected solid letter without internal cuts; preserve the remaining KiYo lettering, black rounded tile and glossy rim."
+Transparent-template prompt:
+"Produce a clean flat black Ki/Yo wordmark on a genuinely transparent background, matching the approved letter shapes, with a fully connected K, transparent counters and gaps, no tile, shadow, texture or speckles."
+
+Generated image prompts are descriptive, not a promise of bit-identical regeneration. Image metadata and private generation paths do not belong in this repository.

@@ -1,0 +1,26 @@
+name: Bug report / Ошибка
+description: Report a reproducible KiYo issue using synthetic text only.
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include passwords, private typed text, clipboard contents or signing material. For security vulnerabilities, follow SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: KiYo and macOS versions
+      placeholder: "KiYo 0.2.2, macOS 26.6.2, Apple Silicon"
+    validations:
+      required: true
+  - type: input
+    id: editor
+    attributes:
+      label: App or editor where the issue occurs
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps, expected result and actual result
+      description: Include input layout and relevant settings. Use invented example text.
+    validations:
+      required: true
