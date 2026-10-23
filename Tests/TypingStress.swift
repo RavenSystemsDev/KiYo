@@ -84,6 +84,17 @@ func runTypingStressTests() {
     assert(layoutState.pendingLayoutChange == nil)
     layoutState.observeKeyboardLayout(true)
     assert(layoutState.buffer.isEmpty, "An external source change must invalidate partial input")
+    assert(VisibleWord.validated(" rfr", expectedUTF16Count: 3, hasBoundary: true) == "rfr")
+    assert(VisibleWord.validated("xrfr", expectedUTF16Count: 3, hasBoundary: true) == nil)
+    assert(VisibleWord.validated("rfr", expectedUTF16Count: 3, hasBoundary: false) == "rfr")
+    assert(VisibleWord.validated("r fr", expectedUTF16Count: 4, hasBoundary: false) == nil)
+    // The event's Unicode can lag the actual editor's input source.
+    document = "rfr"
+    app.buffer = "как"
+    app.testVisibleWord = "rfr"
+    type(" ")
+    assert(document == "как ", "Correction used stale event Unicode instead of the visible word")
+    app.testVisibleWord = nil
     // Keep one buffer/state across alternating conversion directions.
     document = ""
     app.buffer = ""

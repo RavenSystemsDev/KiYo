@@ -62,7 +62,8 @@ extension App {
             testConvertedSelection = SelectionConversion.converted(testSelection ?? "")
             return
         }
-        guard !shortcutBusy, !IsSecureEventInputEnabled(), !protectedField(pid: pid), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { return }
+        guard !shortcutBusy, !IsSecureEventInputEnabled(), !protectedField(pid: pid), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { selectionStatus = "blockedOrFocusChanged"; return }
+        selectionStatus = "readingSelection"
         let application = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(application, 0.1)
         func focused() -> AXUIElement? {
@@ -70,7 +71,7 @@ extension App {
             guard AXUIElementCopyAttributeValue(application, kAXFocusedUIElementAttribute as CFString, &value) == .success, let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
             return (value as! AXUIElement)
         }
-        guard let element = focused() else { selectionFeedback(false, conversion: true); return }
+        guard let element = focused() else { selectionStatus = "focusUnavailable"; selectionFeedback(false, conversion: true); return }
         AXUIElementSetMessagingTimeout(element, 0.1)
         func attribute(_ name: String) -> CFTypeRef? {
             var value: CFTypeRef?
@@ -95,6 +96,7 @@ extension App {
             if AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, converted as CFString) == .success {
                 buffer = ""
                 selectLayout(russian: LayoutConverter.russian(converted))
+                selectionStatus = "directReplacementSucceeded"
                 selectionFeedback(true, conversion: true)
                 return
             }
@@ -104,7 +106,7 @@ extension App {
         // Paste is allowed only in an editable control, never in selected static page text.
         let role = attribute(kAXRoleAttribute) as? String ?? ""
         guard [kAXTextFieldRole, kAXTextAreaRole, kAXComboBoxRole].contains(role), (attribute(kAXEnabledAttribute) as? Bool) != false,
-              let snapshot = SelectionClipboard(NSPasteboard.general) else { selectionFeedback(false, conversion: true); return }
+              let snapshot = SelectionClipboard(NSPasteboard.general) else { selectionStatus = "notEditableOrClipboardTooLarge"; selectionFeedback(false, conversion: true); return }
         func chord(_ key: CGKeyCode) -> [CGEvent]? {
             guard let down = CGEvent(keyboardEventSource: nil, virtualKey: key, keyDown: true), let up = CGEvent(keyboardEventSource: nil, virtualKey: key, keyDown: false) else { return nil }
             for event in [down, up] { event.flags = .maskCommand; event.setIntegerValueField(.eventSourceUserData, value: injectedTag) }
@@ -114,6 +116,7 @@ extension App {
         let board = NSPasteboard.general
         let baseline = board.changeCount
         shortcutBusy = true
+        selectionStatus = "copyRequested"
         for event in copy { event.postToPid(pid) }
         func finish(_ attempts: Int) {
             let count = board.changeCount
@@ -129,6 +132,7 @@ extension App {
             guard count != baseline, let copied = board.string(forType: .string), let converted = SelectionConversion.converted(copied), (selected?.isEmpty != false || selected == copied) else {
                 if count != baseline { snapshot.restore(board, ifUnchanged: count) }
                 shortcutBusy = false
+                selectionStatus = "copyUnavailableOrSelectionMismatch"
                 selectionFeedback(false, conversion: true)
                 return
             }
@@ -140,6 +144,7 @@ extension App {
                 return
             }
             let pastedCount = board.changeCount
+            selectionStatus = "pasteRequested"
             for event in paste { event.postToPid(pid) }
             buffer = ""
             selectLayout(russian: LayoutConverter.russian(converted))
