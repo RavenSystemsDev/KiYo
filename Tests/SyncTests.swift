@@ -24,6 +24,8 @@ func runSyncTests() {
     let customShortcut = ExclusionShortcut.encode(key: 35, flags: [.maskControl, .maskAlternate, .maskShift])!
     assert(SyncRules.valid("exclusionShortcut", SyncEntry(value: .string(customShortcut), modified: 100, writer: "a")))
     assert(!SyncRules.valid("exclusionShortcut", SyncEntry(value: .string("custom:999:0"), modified: 100, writer: "a")))
+    assert(SyncRules.valid("convertSelectionShortcut", SyncEntry(value: .string(customShortcut), modified: 100, writer: "a")))
+    assert(!SyncRules.valid("convertSelectionShortcut", SyncEntry(value: .string("custom:999:0"), modified: 100, writer: "a")))
     let document = SyncDocument(device: "a", entries: combined)
     let data = try! JSONEncoder().encode(document)
     assert(try! JSONDecoder().decode(SyncDocument.self, from: data).entries == combined)

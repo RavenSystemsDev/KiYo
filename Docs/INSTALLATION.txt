@@ -1,0 +1,23 @@
+KiYo — установка / Installation
+
+Русский
+1. Завершите уже работающую KiYo через её настройки.
+2. Перетащите Kiyo.app на ярлык Applications («Программы») в этом образе.
+3. Запускайте KiYo из папки «Программы»; после установки извлеките образ.
+4. Разрешите доступ в «Системные настройки → Конфиденциальность и безопасность → Универсальный доступ».
+
+Первое открытие может занять дополнительное время: macOS проверяет приложение.
+Эта предварительная сборка подписана локальным сертификатом и не нотариализована Apple. macOS может заблокировать запуск. Пользуйтесь штатным разрешением в «Конфиденциальность и безопасность», только если система его предлагает; не отключайте Gatekeeper.
+Повторное открытие уже работающей KiYo показывает её настройки. Второй обработчик клавиатуры не запускается.
+
+English
+1. Quit any running KiYo using its Settings window.
+2. Drag Kiyo.app onto the Applications shortcut in this image.
+3. Launch KiYo from Applications, then eject the disk image.
+4. Grant Accessibility access in System Settings → Privacy & Security → Accessibility.
+
+The initial macOS security assessment may delay first launch. This preview is locally signed and is not Apple-notarized. macOS may block it. Use the standard Privacy & Security approval only if offered; do not disable Gatekeeper.
+Reopening a running KiYo reveals its Settings window without starting another keyboard handler.
+
+Apple Silicon · macOS 13+
+Raven Systems — https://ravensystems.io/

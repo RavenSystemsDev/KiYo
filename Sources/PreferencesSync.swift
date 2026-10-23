@@ -25,7 +25,7 @@ enum SyncRules {
         switch (key, entry.value) {
         case ("language", .string(let value)): return ["system", "ru", "en"].contains(value)
         case ("presentation", .string(let value)): return ["automatic", "notch", "menubar"].contains(value)
-        case ("exclusionShortcut", .string(let value)): return ExclusionShortcut.valid(value)
+        case ("exclusionShortcut", .string(let value)), ("convertSelectionShortcut", .string(let value)): return ExclusionShortcut.valid(value)
         case ("sensitivity", .integer(let value)): return (0...2).contains(value)
         case ("shortWords", .boolean), ("spellingEnabled", .boolean), ("correctionEnabled", .boolean): return true
         default: if case .boolean = entry.value { return word(key) != nil }; return false
@@ -126,8 +126,9 @@ final class PreferencesSync {
     }
     private func snapshot() -> [String: SyncValue] {
         ["exclusionShortcut": .string(defaults.string(forKey: "exclusionShortcut") ?? "ctrlOptK"),
+         "convertSelectionShortcut": .string(defaults.string(forKey: "convertSelectionShortcut") ?? "ctrlOptR"),
          "language": .string(defaults.string(forKey: "language") ?? "system"),
-         "presentation": .string(defaults.string(forKey: "presentation") ?? "automatic"),
+         "presentation": .string(defaults.string(forKey: "presentation") ?? "menubar"),
          "sensitivity": .integer(defaults.object(forKey: "sensitivity") as? Int ?? 1),
          "shortWords": .boolean(defaults.object(forKey: "shortWords") as? Bool ?? true),
          "spellingEnabled": .boolean(defaults.bool(forKey: "spellingEnabled")),

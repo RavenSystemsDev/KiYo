@@ -12,6 +12,7 @@ trap cleanup EXIT
 mkdir -p "$kiyo_package_tmp/stage"
 ditto dist/Kiyo.app "$kiyo_package_tmp/stage/Kiyo.app"
 ln -s /Applications "$kiyo_package_tmp/stage/Applications"
+cp Docs/INSTALLATION.txt "$kiyo_package_tmp/stage/Read Me - Installation.txt"
 hdiutil create -volname KiYo -srcfolder "$kiyo_package_tmp/stage" -format UDRW "$kiyo_package_tmp/image.dmg" >/dev/null
 hdiutil attach "$kiyo_package_tmp/image.dmg" -nobrowse -mountpoint "$kiyo_package_tmp/volume" >/dev/null
 kiyo_mounted=1
