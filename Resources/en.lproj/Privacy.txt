@@ -1,0 +1,20 @@
+KiYo Privacy
+Updated: October 23, 2026
+
+Developer: Raven Systems — https://ravensystems.io/
+
+KiYo processes typed words locally on your Mac to detect the keyboard layout and correct spelling. This requires Accessibility permission granted by you. KiYo does not create a keystroke log, send typed text to the developer, or use advertising, analytics or tracking.
+
+The current word, a limited spelling cache, the latest correction and a temporary list of rejected corrections may remain in memory. If you immediately erase a correction completely using Backspace, the same word is preserved on retry until the app exits. These temporary preferences are not added to exceptions or synchronization. The panel can show the latest correction until another correction or the app exits. Spelling suggestions are provided by macOS services; Apple controls their behavior and settings.
+
+KiYo skips system Secure Input and fields identified as passwords or email. Apps may expose incomplete field information, so this is not a guarantee for every third-party editor. Never store passwords or other secrets in exceptions.
+
+Explicitly added word exceptions and preferences are stored locally in app settings. KiYo does not encrypt them as a separate secret store. When you invoke the selection shortcut, KiYo reads selected text. If the app does not expose it directly, KiYo invokes Copy and attempts to restore the previous clipboard formats. The data is used only to add exceptions and is not sent to the developer.
+
+Sync is enabled only after you choose a folder. KiYo writes language, panel location, correction preferences, shortcut, exceptions, modification metadata and a random KiYo device ID to that folder. If it is in iCloud Drive, Apple transfers the files according to your account settings. Raven Systems does not operate a sync server. macOS permissions, launch-at-login preferences and typed text are not included in these files.
+
+Disconnect stops further synchronization after operations already in progress finish. It does not delete existing files in the selected folder or local data. Remove exceptions in KiYo settings. To remove the cloud copy completely, disable sync on other devices and delete the KiYo-settings-*.json files in the selected folder yourself.
+
+Diagnostics are off by default. A special launch with --diagnostics creates ~/Library/Caches/local.kiyo.switchet/health.json with permission state, counters and timing measurements, without text. It is never uploaded automatically. Share it with support only if you choose to do so.
+
+For app and privacy inquiries, visit Raven Systems at https://ravensystems.io/ .

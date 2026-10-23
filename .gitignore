@@ -1,0 +1,30 @@
+# Private signing material and local configuration
+.signing/
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.keychain
+*.keychain-db
+*.mobileprovision
+*.provisionprofile
+*.certSigningRequest
+# Generated builds, caches and user data
+dist/
+build/
+DerivedData/
+.swiftpm/
+*.dSYM/
+*.dmg
+*.zip
+*.log
+*.crash
+KiYo-settings-*.json
+health.json
+.DS_Store
+.AppleDouble/
+xcuserdata/
+*.xcuserstate

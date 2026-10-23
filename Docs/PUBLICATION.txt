@@ -1,0 +1,16 @@
+PUBLIC SOURCE AND BINARY RELEASE STATUS
+
+Repository: https://github.com/Arhitector39/KiYo
+Source snapshot: KiYo 0.2.2, build 8.
+
+This repository contains an explicitly selected source/resource snapshot, without the private development history. Signing keys, keychains, passwords, personal settings, sync files, diagnostic output and compiled releases are not included.
+
+LICENSE sets the owner's source-available conditions: internal company use is allowed; paid distribution or paid access requires separate written permission; redistributed apps must visibly credit Raven Systems and link to https://ravensystems.io/ . Do not label this MIT, GPL or OSI open source.
+
+The current app icon and transparent logo were prepared as AI-assisted project graphics and approved by the maintainer; see BRAND-ASSETS.txt. System frameworks, fonts and symbols remain subject to Apple's terms.
+
+Development builds use ad-hoc signing unless an existing signing identity is explicitly supplied. They are not notarized public binaries. Public binary distribution requires Developer ID, secure signing timestamp, Apple notarization and testing on a clean Mac. Do not disable Gatekeeper.
+
+Automated tests do not establish compatibility with every editor, a real login lifecycle or real two-Mac sync. Those acceptance checks remain separate from publishing the source.
+
+Run python3 scripts/audit-public.py before publishing changes. It checks known credential patterns and forbidden files without printing matched values; it is not a guarantee against all possible secrets.
