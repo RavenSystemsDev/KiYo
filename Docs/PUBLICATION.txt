@@ -1,6 +1,6 @@
 PUBLIC SOURCE AND BINARY RELEASE STATUS
 
-Repository: https://github.com/Arhitector39/KiYo
+Repository: https://github.com/RavenSystemsDev/KiYo
 Source snapshot: KiYo 0.2.2, build 8.
 
 This repository contains an explicitly selected source/resource snapshot, without the private development history. Signing keys, keychains, passwords, personal settings, sync files, diagnostic output and compiled releases are not included.

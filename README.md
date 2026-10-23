@@ -2,7 +2,7 @@
 
 KiYo is a macOS utility by [Raven Systems](https://ravensystems.io/) that corrects words typed in the wrong Russian or English keyboard layout and switches the input language.
 
-[Русский](README.ru.md) · [License](LICENSE) · [Security](SECURITY.md) · [Privacy](Resources/en.lproj/Privacy.txt)
+[GitHub repository](https://github.com/RavenSystemsDev/KiYo) · [Русский](README.ru.md) · [License](LICENSE) · [Security](SECURITY.md) · [Privacy](Resources/en.lproj/Privacy.txt)
 
 **Source-available, not OSI open source.** Companies may use KiYo internally. Selling KiYo, paid derivative versions or paid access is not permitted under this license. Redistributed applications must show creator attribution and the Raven Systems link. See [LICENSE](LICENSE) for the actual terms.
 
