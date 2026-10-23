@@ -6,6 +6,24 @@
 
 Приложение для macOS от [Raven Systems](https://ravensystems.io/), которое исправляет текст в неверной русской или английской раскладке и переключает язык ввода.
 
+
+<h2 align="center">Скачать KiYo для Mac</h2>
+<p align="center">
+  <a href="https://github.com/RavenSystemsDev/KiYo/releases/download/v0.2.3-rc1/KiYo-0.2.3-rc1.dmg"><img src="https://img.shields.io/badge/Скачать_KiYo-DMG_↓-111111?style=for-the-badge&amp;logo=apple&amp;logoColor=white" alt="Скачать KiYo — DMG" height="40"></a>
+</p>
+<p align="center"><b>0.2.3-rc1</b> · Apple Silicon · macOS 13+</p>
+
+> **Установка за три шага**
+> 1. Нажмите **«Скачать KiYo»** выше и откройте файл `.dmg`.
+> 2. Перетащите **Kiyo.app** в **Applications / Программы**.
+> 3. Откройте KiYo из «Программ» и включите доступ в **Системные настройки → Конфиденциальность и безопасность → Универсальный доступ**.
+>
+> Скачивать исходный код и собирать приложение не нужно.
+
+[Прямая ссылка на DMG](https://github.com/RavenSystemsDev/KiYo/releases/download/v0.2.3-rc1/KiYo-0.2.3-rc1.dmg) · [Релиз и SHA-256](https://github.com/RavenSystemsDev/KiYo/releases/tag/v0.2.3-rc1)
+
+**Предварительная версия:** без нотариализации Apple, macOS может заблокировать запуск. Не отключайте Gatekeeper.
+
 [English](README.md) · [Условия использования](LICENSE) · [Безопасность](SECURITY.md) · [Конфиденциальность](Resources/ru.lproj/Privacy.txt)
 
 Код открыт для изучения по лицензии **source-available**. Компаниям разрешено внутреннее использование. Продажа KiYo, платных производных версий и платного доступа без отдельного письменного разрешения не допускается. В распространяемых приложениях обязательны видимое указание автора и ссылка Raven Systems. Это не MIT/GPL и не стандартная open-source лицензия; точные условия изложены в LICENSE.
