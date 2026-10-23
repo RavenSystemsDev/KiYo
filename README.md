@@ -6,6 +6,24 @@
 
 KiYo is a macOS utility by [Raven Systems](https://ravensystems.io/) that corrects words typed in the wrong Russian or English keyboard layout and switches the input language.
 
+
+<h2 align="center">Download KiYo for Mac</h2>
+<p align="center">
+  <a href="https://github.com/RavenSystemsDev/KiYo/releases/download/v0.2.3-rc1/KiYo-0.2.3-rc1.dmg"><img src="https://img.shields.io/badge/Download_KiYo-DMG_↓-111111?style=for-the-badge&amp;logo=apple&amp;logoColor=white" alt="Download KiYo — DMG" height="40"></a>
+</p>
+<p align="center"><b>0.2.3-rc1</b> · Apple Silicon · macOS 13+</p>
+
+> **Install in three steps**
+> 1. Click **Download KiYo** above and open the `.dmg` file.
+> 2. Drag **Kiyo.app** into **Applications**.
+> 3. Open KiYo from Applications and enable access in **System Settings → Privacy & Security → Accessibility**.
+>
+> You do not need to download or build the source code.
+
+[Direct DMG download](https://github.com/RavenSystemsDev/KiYo/releases/download/v0.2.3-rc1/KiYo-0.2.3-rc1.dmg) · [Release notes and SHA-256](https://github.com/RavenSystemsDev/KiYo/releases/tag/v0.2.3-rc1)
+
+**Preview build:** not notarized by Apple; macOS may block launch. Do not disable Gatekeeper.
+
 [GitHub repository](https://github.com/RavenSystemsDev/KiYo) · [Русский](README.ru.md) · [License](LICENSE) · [Security](SECURITY.md) · [Privacy](Resources/en.lproj/Privacy.txt)
 
 **Source-available, not OSI open source.** Companies may use KiYo internally. Selling KiYo, paid derivative versions or paid access is not permitted under this license. Redistributed applications must show creator attribution and the Raven Systems link. See [LICENSE](LICENSE) for the actual terms.
