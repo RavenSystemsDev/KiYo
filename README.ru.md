@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Resources/AppIcon.png" width="128" alt="KiYo">
+</p>
+
 # KiYo
 
 Приложение для macOS от [Raven Systems](https://ravensystems.io/), которое исправляет текст в неверной русской или английской раскладке и переключает язык ввода.

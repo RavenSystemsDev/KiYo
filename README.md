@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Resources/AppIcon.png" width="128" alt="KiYo">
+</p>
+
 # KiYo
 
 KiYo is a macOS utility by [Raven Systems](https://ravensystems.io/) that corrects words typed in the wrong Russian or English keyboard layout and switches the input language.
