@@ -8,6 +8,7 @@ func runTypingStressTests() {
     app.testSensitivity = 1
     app.testShortWords = true
     app.testSpellingEnabled = false
+    app.testConversionShortcutID = "ctrlOptR"
     var document = ""
     var injectedEvents = 0
     var boundaryKeys: [Int64] = []
@@ -71,6 +72,24 @@ func runTypingStressTests() {
             checkedCharacters += input.count
         }
     }
+    // Polling must not erase letters typed while our previous source switch settles.
+    let layoutState = App()
+    layoutState.currentRussian = true
+    layoutState.pendingLayoutChange = (false, Date().addingTimeInterval(2))
+    layoutState.buffer = "gh"
+    layoutState.observeKeyboardLayout(true)
+    assert(layoutState.buffer == "gh")
+    layoutState.observeKeyboardLayout(false)
+    assert(layoutState.buffer == "gh", "An automatic source acknowledgement erased the next word")
+    assert(layoutState.pendingLayoutChange == nil)
+    layoutState.observeKeyboardLayout(true)
+    assert(layoutState.buffer.isEmpty, "An external source change must invalidate partial input")
+    // Keep one buffer/state across alternating conversion directions.
+    document = ""
+    app.buffer = ""
+    app.correctionRejections = CorrectionRejections()
+    for _ in 0..<20 { type("ghbdtn рш ghbdtn ") }
+    assert(document == String(repeating: "привет hi привет ", count: 20), "Alternating directions stopped correcting")
     func expect(_ input: String, _ expected: String) {
         document = ""; app.buffer = ""
         type(input)
@@ -99,6 +118,7 @@ func runTypingStressTests() {
     expect("Helllo, ", "Hello, ")
     expect("превет ", "привет ")
     expect("праивльно поставвить ", "правильно поставить ")
+    expect("нунжно Нунжно, ", "нужно Нужно, ")
     expect("чтобыпотом Чтобыпотом ", "чтобы потом Чтобы потом ")
     expect("какбудто ", "как будто ")
     expect("которыепишутсявместе ", "которые пишутся вместе ")
@@ -118,9 +138,14 @@ func runTypingStressTests() {
     assert(boundaryKeys == [48, 36], "Tab and Return must preserve their original keycodes")
     app.correctionRejections = CorrectionRejections()
     expect("ghbdtn " + String(repeating: "\u{8}", count: 7) + "ghbdtn ", "ghbdtn ")
-    assert(app.correctionRejections.shouldPreserve("ghbdtn"))
+    assert(!app.correctionRejections.shouldPreserve("ghbdtn"), "Retry preservation must be consumed once")
     assert(!app.testRussian, "Erasing the correction restores the original input layout")
     app.correctionRejections = CorrectionRejections()
+    // Erasing one correction must not disable that word for the rest of the session.
+    app.correctionRejections = CorrectionRejections()
+    expect("ghbdtn " + String(repeating: "\u{8}", count: 7) + "рш ghbdtn ", "hi привет ")
+    app.correctionRejections = CorrectionRejections()
+    expect("ghbdtn " + String(repeating: "\u{8}", count: 7) + "ghbdtn ghbdtn ", "ghbdtn привет ")
     var retry = CorrectionRejections()
     let time = Date()
     retry.record(word: "sample", outputCount: 3, pid: 1, now: time)
@@ -135,6 +160,28 @@ func runTypingStressTests() {
     retry.record(word: "sample", outputCount: 1, pid: 1, now: time)
     retry.backspace(pid: 1, now: time.addingTimeInterval(16))
     assert(!retry.shouldPreserve("sample"))
+    assert(SelectionConversion.converted("ghbdtn, vbh!\nруддщ 😀") == "привет, мир!\nhello 😀")
+    assert(SelectionConversion.converted("Привет\nHello") == "Ghbdtn\nРуддщ")
+    assert(SelectionConversion.converted("😀\n") == nil)
+    assert(SelectionConversion.converted(String(repeating: "a", count: SelectionConversion.limit + 1)) == nil)
+    let convertKey = CGEvent(keyboardEventSource: nil, virtualKey: 15, keyDown: true)!
+    convertKey.flags = [.maskControl, .maskAlternate]
+    app.enabled = false
+    app.testSelection = "ghbdtn\nруддщ"
+    assert(app.handle(type: .keyDown, event: convertKey, proxy: nil))
+    assert(app.testConvertedSelection == "привет\nhello", "Explicit selection conversion must also work while paused")
+    app.testConvertedSelection = nil
+    app.testProtectedField = true
+    assert(!app.handle(type: .keyDown, event: convertKey, proxy: nil))
+    assert(app.testConvertedSelection == nil)
+    app.testProtectedField = false
+    app.testConversionShortcutID = "off"
+    assert(!app.handle(type: .keyDown, event: convertKey, proxy: nil))
+    app.testConversionShortcutID = "ctrlOptR"
+    retry.record(word: "sample", outputCount: 1, pid: 1, now: time)
+    retry.backspace(pid: 1, now: time)
+    assert(!retry.consumePreservation("sample", now: time.addingTimeInterval(16)))
+    assert(!retry.shouldPreserve("sample", now: time.addingTimeInterval(17)))
     app.testSelection = "ExampleTerm, другойтермин"
     app.testExcludedWords = []
     app.enabled = false

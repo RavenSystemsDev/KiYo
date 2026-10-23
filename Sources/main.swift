@@ -95,12 +95,12 @@ struct LayoutConverter {
 }
 
 enum ExclusionShortcut {
-    static let ids = ["ctrlOptK", "ctrlOptE", "ctrlShiftK", "ctrlOptShiftK", "off"]
-    static let titles = ["⌃⌥K", "⌃⌥E", "⌃⇧K", "⌃⌥⇧K", "—"]
+    static let ids = ["ctrlOptK", "ctrlOptE", "ctrlShiftK", "ctrlOptShiftK", "ctrlOptR", "off"]
+    static let titles = ["⌃⌥K", "⌃⌥E", "⌃⇧K", "⌃⌥⇧K", "⌃⌥R", "—"]
     static let modifierMask: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
     static func decode(_ id: String) -> (key: Int64, flags: CGEventFlags)? {
-        let masks: [CGEventFlags] = [[.maskControl, .maskAlternate], [.maskControl, .maskAlternate], [.maskControl, .maskShift], [.maskControl, .maskAlternate, .maskShift]]
-        if let index = ids.firstIndex(of: id), index < masks.count { return (index == 1 ? 14 : 40, masks[index]) }
+        let masks: [CGEventFlags] = [[.maskControl, .maskAlternate], [.maskControl, .maskAlternate], [.maskControl, .maskShift], [.maskControl, .maskAlternate, .maskShift], [.maskControl, .maskAlternate]]
+        if let index = ids.firstIndex(of: id), index < masks.count { return (index == 1 ? 14 : index == 4 ? 15 : 40, masks[index]) }
         let parts = id.split(separator: ":")
         guard parts.count == 3, parts[0] == "custom", let key = Int64(parts[1]), let raw = UInt64(parts[2]), (0...127).contains(key), ![54,55,56,57,58,59,60,61,62,63].contains(key) else { return nil }
         let flags = CGEventFlags(rawValue: raw)
@@ -146,7 +146,7 @@ struct CorrectionRejections {
         var restoreLayout: Bool
     }
     var pending: Pending?
-    private var preserved: [String: Date] = [:]
+    private var preserved: (word: String, until: Date)?
     mutating func record(word: String, outputCount: Int, pid: pid_t, now: Date = Date(), restoreLayout: Bool = true) {
         pending = Pending(word: word.lowercased(), remaining: outputCount, pid: pid, deadline: now.addingTimeInterval(15), restoreLayout: restoreLayout)
     }
@@ -156,14 +156,20 @@ struct CorrectionRejections {
         guard var attempt = pending, attempt.pid == pid, now <= attempt.deadline else { pending = nil; return nil }
         attempt.remaining -= 1
         if attempt.remaining <= 0 {
-            preserved[attempt.word] = now
-            if preserved.count > 128, let oldest = preserved.min(by: { $0.value < $1.value })?.key { preserved.removeValue(forKey: oldest) }
+            preserved = (attempt.word, now.addingTimeInterval(15))
             pending = nil
             return attempt.restoreLayout ? attempt.word : nil
         } else { pending = attempt }
         return nil
     }
-    func shouldPreserve(_ word: String) -> Bool { preserved[word.lowercased()] != nil }
+    func shouldPreserve(_ word: String, now: Date = Date()) -> Bool {
+        guard let preserved else { return false }
+        return preserved.word == word.lowercased() && now <= preserved.until
+    }
+    mutating func consumePreservation(_ word: String, now: Date = Date()) -> Bool {
+        defer { preserved = nil }
+        return shouldPreserve(word, now: now)
+    }
 }
 
 enum SystemSpelling {
@@ -310,6 +316,10 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var testExcludedWords: Set<String>?
     var testShortcutID: String?
     var testSelection: String?
+    var shortcutRecordingKey = "exclusionShortcut"
+    var selectionEpoch = 0
+    var testConversionShortcutID: String?
+    var testConvertedSelection: String?
     var shortcutBusy = false
     var shortcutHUD: NSPanel?
     var shortcutRecorder: NSPanel?
@@ -327,7 +337,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var panel: NSPanel!
     var statusItem: NSStatusItem?
     var usesMenuBar = false
-    var presentationPreference: String { UserDefaults.standard.string(forKey: "presentation") ?? "automatic" }
+    var presentationPreference: String { UserDefaults.standard.string(forKey: "presentation") ?? "menubar" }
     var expanded = false
     var status: NSTextField!
     var content: ContentView?
@@ -346,6 +356,10 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var panelWidth: CGFloat = 360
     var bodyHeight: CGFloat { 220 }
     var notchWidth: CGFloat = 180
+    var pendingLayoutChange: (russian: Bool, until: Date)?
+    var layoutBufferResets = 0
+    var skippedReasons: [String: Int] = [:]
+    func recordSkip(_ reason: String) { skippedReasons[reason, default: 0] += 1 }
     var currentRussian = false
     var lastOriginal = ""
     var lastCorrected = ""
@@ -363,10 +377,42 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var notice = "Готов к работе"
     var lastPID: pid_t = 0
 
+    var instanceLock: SingleInstanceLock?
+    var secondaryInstance = false
+    var startupError: Error?
+    private static let reopenNotification = Notification.Name("io.ravensystems.kiyo.reopen")
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        if !secondaryInstance && startupError == nil {
+            DistributedNotificationCenter.default().addObserver(self, selector: #selector(reopenFromAnotherCopy), name: Self.reopenNotification, object: nil)
+        }
+    }
+    @objc func reopenFromAnotherCopy(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in self?.revealInterface() }
+    }
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        if secondaryInstance {
+            // Finish the Launch Services handshake before closing the extra copy.
+            DispatchQueue.main.async {
+                DistributedNotificationCenter.default().postNotificationName(Self.reopenNotification, object: nil, userInfo: nil, deliverImmediately: true)
+                NSApp.terminate(nil)
+            }
+            return
+        }
+        if startupError != nil {
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                let alert = NSAlert()
+                alert.messageText = self.tr("Не удалось запустить KiYo", "KiYo could not start")
+                alert.informativeText = self.tr("Не удалось открыть служебный файл в папке Application Support. Проверьте доступ к папке и повторите запуск.", "Could not open the instance file in Application Support. Check folder access and try again.")
+                alert.runModal()
+                NSApp.terminate(nil)
+            }
+            return
+        }
+        // Static NSServices are registered by macOS from Info.plist.
         NSApp.servicesProvider = self
-        NSUpdateDynamicServices()
         currentRussian = activeLayoutIsRussian()
         createPanel()
         configureAppMenu()
@@ -422,7 +468,8 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     icon.size = NSSize(width: 18, height: 20)
                     button.image = icon
                     button.target = self
-                    button.action = #selector(expand)
+                    button.action = #selector(statusItemClicked(_:))
+                    button.sendAction(on: [.leftMouseUp, .rightMouseUp])
                     button.toolTip = "KiYo"
                     button.setAccessibilityLabel("KiYo")
                 }
@@ -434,6 +481,24 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             panel.alphaValue = 1
             panel.orderFrontRegardless()
         }
+    }
+    @objc func statusItemClicked(_ sender: NSStatusBarButton) {
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            let menu = NSMenu()
+            for (title, action) in [
+                (tr("Настройки…", "Settings…"), #selector(showSettings)),
+                (enabled ? tr("Пауза", "Pause") : tr("Продолжить", "Resume"), #selector(toggleEnabled)),
+                (tr("О KiYo", "About KiYo"), #selector(showAbout)),
+                (tr("Инструкция", "User guide"), #selector(showGuide)),
+                (tr("Разрешения…", "Permissions…"), #selector(permissions)),
+                (tr("Завершить KiYo", "Quit KiYo"), #selector(quit))
+            ] {
+                let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+                item.target = self
+                menu.addItem(item)
+            }
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.minY), in: sender)
+        } else { expand() }
     }
     func targetFrame() -> NSRect {
         if usesMenuBar {
@@ -567,7 +632,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let window = settingsWindow else { return }
         window.title = ""
         window.titleVisibility = .hidden
-        let root = ContentView(frame: NSRect(x: 0, y: 0, width: 480, height: 590))
+        let root = ContentView(frame: NSRect(x: 0, y: 0, width: 480, height: 626))
         window.contentView = root
         func group(_ title: String, y: CGFloat, height: CGFloat) -> ContentView {
             let box = NSBox(frame: NSRect(x: 20, y: y, width: 440, height: height))
@@ -606,7 +671,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             control.target = self; control.action = action
             return control
         }
-        let general = group("", y: 12, height: 522)
+        let general = group("", y: 12, height: 558)
         let languages = NSPopUpButton()
         languages.controlSize = .large
         languages.addItems(withTitles: [tr("Системный", "System default"), "Русский", "English"])
@@ -634,27 +699,31 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         shortcutHelp.textColor = .secondaryLabelColor
         shortcutHelp.frame = NSRect(x: 16, y: 302, width: 408, height: 34)
         general.addSubview(shortcutHelp)
+        let convertShortcut = NSButton(title: ExclusionShortcut.title(UserDefaults.standard.string(forKey: "convertSelectionShortcut") ?? "ctrlOptR"), target: self, action: #selector(recordConversionShortcut))
+        convertShortcut.bezelStyle = .rounded
+        convertShortcut.toolTip = tr("Исправить раскладку выделенного текста. Нажмите, чтобы назначить сочетание.", "Convert the keyboard layout of selected text. Click to record a shortcut.")
+        row(general, tr("Исправить выделение", "Convert selection"), y: 342, control: convertShortcut)
         let presentation = NSPopUpButton()
         presentation.controlSize = .large
-        presentation.addItems(withTitles: language == "en" ? ["Automatic", "In the notch", "In the menu bar"] : ["Автоматически", "В чёлке", "В строке меню"])
+        presentation.addItems(withTitles: language == "en" ? ["Automatic", "In the notch", "In the status bar"] : ["Автоматически", "В чёлке", "В статус-баре"])
         presentation.selectItem(at: ["automatic", "notch", "menubar"].firstIndex(of: presentationPreference) ?? 0)
         presentation.target = self
         presentation.action = #selector(changePresentation(_:))
-        row(general, tr("Отображение", "Display mode"), y: 342, control: presentation)
+        row(general, tr("Отображение", "Display mode"), y: 378, control: presentation)
         let about = NSButton(title: tr("О KiYo", "About KiYo"), target: self, action: #selector(showAbout))
         about.bezelStyle = .rounded
-        row(general, tr("О приложении", "Application"), y: 378, control: about)
+        row(general, tr("О приложении", "Application"), y: 414, control: about)
         let guide = NSButton(title: tr("Открыть", "Open"), target: self, action: #selector(showGuide))
         guide.bezelStyle = .rounded
-        row(general, tr("Инструкция", "User guide"), y: 414, control: guide)
+        row(general, tr("Инструкция", "User guide"), y: 450, control: guide)
         let sync = NSButton(title: preferencesSync.connected ? tr("Отключить", "Disconnect") : tr("Подключить…", "Connect…"), target: self, action: #selector(configureSync))
         sync.bezelStyle = .rounded
         syncButton = sync
-        row(general, tr("iCloud Drive", "iCloud Drive"), y: 450, control: sync)
+        row(general, tr("iCloud Drive", "iCloud Drive"), y: 486, control: sync)
         let syncInfo = NSTextField(labelWithString: "")
         syncInfo.font = .systemFont(ofSize: 11)
         syncInfo.textColor = .secondaryLabelColor
-        syncInfo.frame = NSRect(x: 16, y: 490, width: 408, height: 18)
+        syncInfo.frame = NSRect(x: 16, y: 526, width: 408, height: 18)
         general.addSubview(syncInfo)
         syncStatusLabel = syncInfo
         updateSyncStatus()
@@ -662,17 +731,17 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         access.textColor = .secondaryLabelColor
         access.font = .systemFont(ofSize: 11)
         access.alignment = .center
-        access.frame = NSRect(x: 110, y: 556, width: 260, height: 20)
+        access.frame = NSRect(x: 110, y: 592, width: 260, height: 20)
         root.addSubview(access)
         let permissions = NSButton(title: tr("Разрешения…", "Permissions…"), target: self, action: #selector(permissions))
         permissions.bezelStyle = .rounded
         permissions.controlSize = .small
-        permissions.frame = NSRect(x: 366, y: 550, width: 94, height: 28)
+        permissions.frame = NSRect(x: 366, y: 586, width: 94, height: 28)
         root.addSubview(permissions)
         let quit = NSButton(title: tr("Завершить", "Quit"), target: self, action: #selector(quit))
         quit.bezelStyle = .rounded
         quit.controlSize = .small
-        quit.frame = NSRect(x: 20, y: 550, width: 90, height: 28)
+        quit.frame = NSRect(x: 20, y: 586, width: 90, height: 28)
         root.addSubview(quit)
     }
     @objc func editExceptions() {
@@ -738,18 +807,29 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         return false
     }
     func finishShortcutRecording(_ value: String?) {
+        if let value, let chosen = ExclusionShortcut.decode(value) {
+            let otherKey = shortcutRecordingKey == "exclusionShortcut" ? "convertSelectionShortcut" : "exclusionShortcut"
+            let other = UserDefaults.standard.string(forKey: otherKey) ?? (otherKey == "exclusionShortcut" ? "ctrlOptK" : "ctrlOptR")
+            if ExclusionShortcut.matches(other, key: chosen.key, flags: chosen.flags) {
+                (shortcutRecorder?.contentView?.subviews.first as? NSTextField)?.stringValue = tr("Это сочетание уже используется KiYo", "This shortcut is already used by KiYo")
+                return
+            }
+        }
         if let monitor = shortcutMonitor { NSEvent.removeMonitor(monitor); shortcutMonitor = nil }
         if let sheet = shortcutRecorder { settingsWindow?.endSheet(sheet); sheet.orderOut(nil) }
         shortcutRecorder = nil
-        if let value { UserDefaults.standard.set(value, forKey: "exclusionShortcut") }
+        if let value { UserDefaults.standard.set(value, forKey: shortcutRecordingKey) }
         buffer = ""
         refreshSettings()
     }
     @objc func cancelShortcutRecording() { finishShortcutRecording(nil) }
     @objc func disableShortcutRecording() { finishShortcutRecording("off") }
-    @objc func resetShortcutRecording() { finishShortcutRecording("ctrlOptK") }
-    @objc func recordExclusionShortcut() {
+    @objc func resetShortcutRecording() { finishShortcutRecording(shortcutRecordingKey == "exclusionShortcut" ? "ctrlOptK" : "ctrlOptR") }
+    @objc func recordExclusionShortcut() { recordShortcut(key: "exclusionShortcut") }
+    @objc func recordConversionShortcut() { recordShortcut(key: "convertSelectionShortcut") }
+    func recordShortcut(key: String) {
         guard shortcutRecorder == nil, let parent = settingsWindow else { return }
+        shortcutRecordingKey = key
         let sheet = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 190), styleMask: [.titled], backing: .buffered, defer: false)
         sheet.title = tr("Горячая клавиша", "Keyboard shortcut")
         let root = ContentView(frame: NSRect(x: 0, y: 0, width: 420, height: 190)); sheet.contentView = root
@@ -757,7 +837,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         prompt.frame = NSRect(x: 20, y: 20, width: 380, height: 28); prompt.alignment = .center; root.addSubview(prompt)
         let hint = NSTextField(wrappingLabelWithString: tr("Используйте ⌘, ⌃ или ⌥ вместе с любой клавишей. Можно добавить ⇧. Esc — отмена. Системные сочетания могут быть недоступны.", "Use ⌘, ⌃ or ⌥ with any key. You can add ⇧. Esc cancels. System shortcuts may be unavailable."))
         hint.frame = NSRect(x: 24, y: 58, width: 372, height: 62); hint.textColor = .secondaryLabelColor; root.addSubview(hint)
-        for (title, x, width, action) in [(tr("Отмена", "Cancel"), CGFloat(20), CGFloat(90), #selector(cancelShortcutRecording)), ("⌃⌥K", CGFloat(120), CGFloat(80), #selector(resetShortcutRecording)), (tr("Отключить", "Disable"), CGFloat(210), CGFloat(190), #selector(disableShortcutRecording))] {
+        for (title, x, width, action) in [(tr("Отмена", "Cancel"), CGFloat(20), CGFloat(90), #selector(cancelShortcutRecording)), (key == "exclusionShortcut" ? "⌃⌥K" : "⌃⌥R", CGFloat(120), CGFloat(80), #selector(resetShortcutRecording)), (tr("Отключить", "Disable"), CGFloat(210), CGFloat(190), #selector(disableShortcutRecording))] {
             let button = NSButton(title: title, target: self, action: action); button.bezelStyle = .rounded; button.frame = NSRect(x: x, y: 140, width: width, height: 28); root.addSubview(button)
         }
         shortcutRecorder = sheet
@@ -766,7 +846,13 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if event.isARepeat { return nil }
             let flags = CGEventFlags(rawValue: UInt64(event.modifierFlags.rawValue)).intersection(ExclusionShortcut.modifierMask)
             if event.keyCode == 53 && flags.isEmpty { self.finishShortcutRecording(nil); return nil }
-            if let id = ExclusionShortcut.encode(key: Int64(event.keyCode), flags: flags) { self.finishShortcutRecording(id) }
+            if let id = ExclusionShortcut.encode(key: Int64(event.keyCode), flags: flags) {
+                let otherKey = key == "exclusionShortcut" ? "convertSelectionShortcut" : "exclusionShortcut"
+                let other = UserDefaults.standard.string(forKey: otherKey) ?? (otherKey == "exclusionShortcut" ? "ctrlOptK" : "ctrlOptR")
+                if ExclusionShortcut.matches(other, key: Int64(event.keyCode), flags: flags) {
+                    prompt?.stringValue = self.tr("Это сочетание уже используется KiYo", "This shortcut is already used by KiYo")
+                } else { self.finishShortcutRecording(id) }
+            }
             else { prompt?.stringValue = self.tr("Добавьте ⌘, ⌃ или ⌥; ⌃⌥Space уже занято", "Add ⌘, ⌃ or ⌥; ⌃⌥Space is already used") }
             return nil
         }
@@ -781,11 +867,12 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         buffer = ""
         return true
     }
-    func selectionFeedback(_ success: Bool) {
+    func selectionFeedback(_ success: Bool, conversion: Bool = false) {
         let hud = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 44), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         hud.level = .floating; hud.isOpaque = false; hud.backgroundColor = .windowBackgroundColor
         hud.hasShadow = true; hud.ignoresMouseEvents = true
-        let label = NSTextField(labelWithString: success ? tr("Добавлено в исключения KiYo", "Added to KiYo exceptions") : tr("Нет доступного выделенного текста", "No accessible text selected"))
+        let message = conversion ? (success ? tr("Раскладка выделения исправлена", "Selected layout converted") : tr("Нет доступного выделения для правки", "No editable selection available")) : (success ? tr("Добавлено в исключения KiYo", "Added to KiYo exceptions") : tr("Нет доступного выделенного текста", "No accessible text selected"))
+        let label = NSTextField(labelWithString: message)
         label.alignment = .center; label.frame = NSRect(x: 8, y: 12, width: 284, height: 20)
         hud.contentView?.addSubview(label); hud.center(); shortcutHUD?.orderOut(nil); shortcutHUD = hud; hud.orderFrontRegardless()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self, weak hud] in hud?.orderOut(nil); if self?.shortcutHUD === hud { self?.shortcutHUD = nil } }
@@ -902,13 +989,20 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let languages = Unmanaged<CFArray>.fromOpaque(pointer).takeUnretainedValue() as? [String] ?? []
         return languages.contains("ru")
     }
-    func checkMouse() {
-        let russian = activeLayoutIsRussian()
+    func observeKeyboardLayout(_ russian: Bool, now: Date = Date()) {
+        if let pending = pendingLayoutChange, now > pending.until { pendingLayoutChange = nil }
+        let requested = pendingLayoutChange?.russian == russian
         if currentRussian != russian {
             currentRussian = russian
-            buffer = ""
+            // Our source change can be reported after the next letters arrive.
+            // Only an external layout change invalidates the partially typed word.
+            if !requested { buffer = ""; layoutBufferResets += 1 }
             if expanded && !animating { render() }
         }
+        if requested { pendingLayoutChange = nil }
+    }
+    func checkMouse() {
+        observeKeyboardLayout(activeLayoutIsRussian())
         guard expanded, !animating else { outsideSince = nil; return }
         if panel.frame.contains(NSEvent.mouseLocation) || (usesMenuBar && (statusItem?.button?.window?.frame.contains(NSEvent.mouseLocation) ?? false)) { outsideSince = nil }
         else if let since = outsideSince {
@@ -1075,7 +1169,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let root = ContentView(frame: NSRect(x: 0, y: 0, width: 480, height: 580)); window.contentView = root
         let sections: [(String, String)] = [
             (tr("Начало работы", "Getting started"), tr("Разрешите KiYo доступ в macOS → Конфиденциальность и безопасность → Универсальный доступ. Печатайте как обычно: слова исправляются после пробела.", "Allow KiYo in macOS → Privacy & Security → Accessibility. Type normally: words are corrected after a space.")),
-            (tr("Раскладка и орфография", "Keyboard layout and spelling"), tr("Автоисправление меняет неверную русскую или английскую раскладку. Для опечаток включите «Исправление орфографии». ⌃⌥Пробел исправляет текущее слово вручную.", "Auto correction fixes the wrong Russian or English layout. Enable Spelling correction to fix typos. ⌃⌥Space corrects the current word manually.")),
+            (tr("Раскладка и орфография", "Keyboard layout and spelling"), tr("Автоисправление меняет неверную русскую или английскую раскладку. Для опечаток включите «Исправление орфографии». ⌃⌥Пробел исправляет текущее слово вручную. Чтобы исправить целую фразу, выделите её и нажмите сочетание «Исправить выделение» (по умолчанию ⌃⌥R).", "Auto correction fixes the wrong Russian or English layout. Enable Spelling correction to fix typos. ⌃⌥Space corrects the current word manually. Select a phrase and press Convert selection (default ⌃⌥R) to convert its layout.")),
             (tr("Исключения и горячая клавиша", "Exceptions and keyboard shortcut"), tr("В настройках нажмите сочетание в строке «Добавить выделение» и задайте своё. Затем выделите текст в приложении и нажмите это сочетание. Эти слова больше не будут исправляться. Список доступен в «Слова-исключения».", "In Settings, click the shortcut next to Add selection and record your own. Then select text in an app and press the shortcut. Those words will no longer be corrected. Manage the list under Excluded words.")),
             (tr("Расположение и пауза", "Location and pause"), tr("Значок открывает панель KiYo. Шестерёнка открывает настройки, кнопка паузы останавливает автоисправление. В «Отображение» выберите чёлку или строку меню; на Mac без чёлки используется строка меню.", "Click the icon to open KiYo. The gear opens Settings; Pause stops auto correction. Display mode lets you choose the notch or menu bar. Macs without a notch use the menu bar.")),
             (tr("Синхронизация", "Sync"), tr("Подключите одну и ту же папку KiYo в iCloud Drive на каждом Mac. Настройки и исключения синхронизируются. Доступ macOS и запуск при входе настраиваются на каждом устройстве отдельно.", "Connect the same KiYo folder in iCloud Drive on each Mac to sync settings and exceptions. Set up macOS permissions and launch at login separately on each device."))
@@ -1119,7 +1213,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             root.addSubview(field)
         }
         text(tr("Добро пожаловать в KiYo", "Welcome to KiYo"), y: 62, height: 28, size: 21, centered: true)
-        text(tr("Значок KiYo находится слева от камеры в чёлке или справа в строке меню. Нажмите на него, чтобы открыть панель. Шестерёнка открывает настройки.", "Find KiYo to the left of the camera in the notch, or on the right of the menu bar. Click the icon to open the panel. The gear opens Settings."), y: 100, height: 65)
+        text(tr("По умолчанию значок KiYo находится справа возле часов. В настройках можно выбрать чёлку. Нажмите на него, чтобы открыть панель. Шестерёнка открывает настройки.", "By default, find KiYo on the right near the clock. You can choose the notch in Settings. Click the icon to open the panel. The gear opens Settings."), y: 100, height: 65)
         text(tr("Язык приложения", "App language"), y: 180, height: 24)
         let languages = NSPopUpButton(frame: NSRect(x: 218, y: 174, width: 178, height: 32))
         languages.addItems(withTitles: [tr("Системный", "System default"), "Русский", "English"])
@@ -1128,7 +1222,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         root.addSubview(languages)
         text(tr("Расположение значка", "Icon location"), y: 222, height: 24)
         let location = NSPopUpButton(frame: NSRect(x: 218, y: 216, width: 178, height: 32))
-        location.addItems(withTitles: language == "en" ? ["Automatic", "In the notch", "In the menu bar"] : ["Автоматически", "В чёлке", "В строке меню"])
+        location.addItems(withTitles: language == "en" ? ["Automatic", "In the notch", "In the status bar"] : ["Автоматически", "В чёлке", "В статус-баре"])
         location.selectItem(at: ["automatic", "notch", "menubar"].firstIndex(of: presentationPreference) ?? 0)
         location.target = self; location.action = #selector(changePresentation(_:))
         root.addSubview(location)
@@ -1162,13 +1256,21 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if !hasOpenWindow { NSApp.setActivationPolicy(.accessory) }
         }
     }
+    func revealInterface() {
+        if let window = welcomeWindow, window.isVisible {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+        } else { showSettings() }
+    }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag { showSettings() }
+        // The notch is a visible NSPanel, but it must not swallow Finder reopen.
+        revealInterface()
         return true
     }
     @objc func showSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 590), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 626), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
             window.delegate = self
             window.center()
@@ -1232,12 +1334,16 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func permissions() {
-        startListening(prompt: true)
-        if tap == nil, let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") { NSWorkspace.shared.open(url) }
+        startListening(prompt: false)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"), NSWorkspace.shared.open(url) { return }
+        let alert = NSAlert()
+        alert.messageText = tr("Откройте Универсальный доступ", "Open Accessibility settings")
+        alert.informativeText = tr("Системные настройки → Конфиденциальность и безопасность → Универсальный доступ → KiYo.", "System Settings → Privacy & Security → Accessibility → KiYo.")
+        alert.runModal()
     }
     func writeHealth() {
         guard CommandLine.arguments.contains("--diagnostics") else { return }
-        let health: [String: Any] = ["accessibility": AXIsProcessTrusted(), "eventTap": tap != nil, "secureInput": IsSecureEventInputEnabled(), "pid": ProcessInfo.processInfo.processIdentifier, "observedKeys": observedKeys, "observedLetters": observedLetters, "corrections": corrections, "layoutChanges": layoutChanges, "enabled": enabled, "bufferLength": buffer.count, "callbackMaximumMS": callbackMaximumMS, "tapTimeouts": tapTimeouts]
+        let health: [String: Any] = ["accessibility": AXIsProcessTrusted(), "eventTap": tap != nil, "secureInput": IsSecureEventInputEnabled(), "pid": ProcessInfo.processInfo.processIdentifier, "observedKeys": observedKeys, "observedLetters": observedLetters, "corrections": corrections, "layoutChanges": layoutChanges, "enabled": enabled, "bufferLength": buffer.count, "callbackMaximumMS": callbackMaximumMS, "tapTimeouts": tapTimeouts, "eventTapEnabled": tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false, "layoutBufferResets": layoutBufferResets, "pendingAutomaticLayout": pendingLayoutChange != nil, "skippedReasons": skippedReasons]
         guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
         let folder = base.appendingPathComponent("local.kiyo.switchet", isDirectory: true)
         do {
@@ -1286,11 +1392,22 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         if event.getIntegerValueField(.eventSourceUserData) == injectedTag { return false }
         if type == .keyUp { return false }
+        selectionEpoch &+= 1
         if type != .keyDown { buffer = ""; ignoringLongToken = false; correctionRejections.cancel(); return false }
         if shortcutRecorder != nil { buffer = ""; ignoringLongToken = false; correctionRejections.cancel(); return false }
         observedKeys += 1
         if event.getIntegerValueField(.keyboardEventKeycode) != 51 || !event.flags.intersection([.maskControl, .maskCommand, .maskAlternate]).isEmpty { correctionRejections.cancel() }
         let shortcutPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
+        if ExclusionShortcut.matches(testConversionShortcutID ?? UserDefaults.standard.string(forKey: "convertSelectionShortcut") ?? "ctrlOptR", key: event.getIntegerValueField(.keyboardEventKeycode), flags: event.flags) {
+            buffer = ""
+            ignoringLongToken = false
+            guard !IsSecureEventInputEnabled(), !protectedField(pid: shortcutPID) else { return false }
+            if event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
+                if testOutput != nil { convertSelectionWithShortcut(pid: shortcutPID) }
+                else { DispatchQueue.main.async { [weak self] in self?.convertSelectionWithShortcut(pid: shortcutPID) } }
+            }
+            return true
+        }
         if ExclusionShortcut.matches(testShortcutID ?? UserDefaults.standard.string(forKey: "exclusionShortcut") ?? "ctrlOptK", key: event.getIntegerValueField(.keyboardEventKeycode), flags: event.flags) {
             buffer = ""
             ignoringLongToken = false
@@ -1301,17 +1418,17 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             return true
         }
-        guard enabled, !replacing else { buffer = ""; ignoringLongToken = false; return false }
+        guard enabled, !replacing else { recordSkip(enabled ? "replacing" : "paused"); buffer = ""; ignoringLongToken = false; return false }
         let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
         if lastPID != pid { buffer = ""; ignoringLongToken = false; correctionRejections.cancel(); lastPID = pid }
-        if IsSecureEventInputEnabled() || protectedField(pid: pid) { buffer = ""; ignoringLongToken = false; correctionRejections.cancel(); return false }
+        if IsSecureEventInputEnabled() || protectedField(pid: pid) { recordSkip("protectedOrUnavailableField"); buffer = ""; ignoringLongToken = false; correctionRejections.cancel(); return false }
         let key = event.getIntegerValueField(.keyboardEventKeycode)
         let flags = event.flags.intersection([.maskCommand, .maskControl, .maskAlternate])
         if key == 49 && flags == [.maskControl, .maskAlternate] {
             guard !buffer.isEmpty else { return false }
             return replace(with: LayoutConverter.convert(buffer), suffix: "", pid: pid)
         }
-        guard flags.isEmpty else { buffer = ""; ignoringLongToken = false; return false }
+        guard flags.isEmpty else { recordSkip("modifierShortcut"); buffer = ""; ignoringLongToken = false; return false }
         if key == 51 { if let original = correctionRejections.backspace(pid: pid) { selectLayout(russian: LayoutConverter.russian(original)) }; if !ignoringLongToken && !buffer.isEmpty { buffer.removeLast() }; return false }
         var chars = [UniChar](repeating: 0, count: 16)
         var length = 0
@@ -1320,7 +1437,9 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if [" ", "\n", "\r", "\t"].contains(text) {
             if ignoringLongToken { buffer = ""; ignoringLongToken = false; return false }
             let minimum = sensitivity == 0 ? 4 : 2
-            if !correctionRejections.shouldPreserve(buffer), !ExclusionRules.protectedToken(buffer, words: excludedWords) {
+            let preserving = correctionRejections.consumePreservation(buffer)
+            let protected = ExclusionRules.protectedToken(buffer, words: excludedWords)
+            if !preserving && !protected {
                 if buffer.count >= minimum, (shortWords || buffer.count >= 3), let fixed = LayoutConverter.correction(buffer, sensitivity: sensitivity) {
                     return replace(with: fixed, suffix: text, pid: pid, changeLayout: LayoutConverter.russian(fixed) != LayoutConverter.russian(buffer), delimiter: event)
                 }
@@ -1328,6 +1447,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     return replace(with: fixed, suffix: text, pid: pid, changeLayout: false, delimiter: event)
                 }
             }
+            if !buffer.isEmpty { recordSkip(preserving ? "retryPreserved" : protected ? "excludedOrAddress" : "noSuggestion") }
             buffer = ""
             ignoringLongToken = false
         } else if !text.isEmpty && text.unicodeScalars.allSatisfy({ !CharacterSet.whitespacesAndNewlines.contains($0) && !CharacterSet.controlCharacters.contains($0) }) {
@@ -1401,22 +1521,37 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         else { event.post(tap: .cgSessionEventTap) }
     }
     func selectLayout(russian: Bool) {
-        if testOutput != nil { testRussian = russian; return }
+        if testOutput != nil { testRussian = russian; pendingLayoutChange = (russian, Date().addingTimeInterval(2)); return }
         let filter = [kTISPropertyInputSourceCategory as String: kTISCategoryKeyboardInputSource as String, kTISPropertyInputSourceIsSelectCapable as String: true] as CFDictionary
         let sources = TISCreateInputSourceList(filter, false).takeRetainedValue() as! [TISInputSource]
         for source in sources {
             guard let ptr = TISGetInputSourceProperty(source, kTISPropertyInputSourceLanguages) else { continue }
             let languages = Unmanaged<CFArray>.fromOpaque(ptr).takeUnretainedValue() as! [String]
             if languages.contains(russian ? "ru" : "en") {
-                if TISSelectInputSource(source) == noErr { currentRussian = russian; layoutChanges += 1 }
+                if TISSelectInputSource(source) == noErr { pendingLayoutChange = (russian, Date().addingTimeInterval(2)); layoutChanges += 1 }
                 return
             }
         }
     }
 }
 
+func runApplication() {
+    let application = NSApplication.shared
+    let delegate = App()
+    do {
+        delegate.instanceLock = try SingleInstanceLock.acquire()
+        delegate.secondaryInstance = delegate.instanceLock == nil
+    } catch { delegate.startupError = error }
+    application.delegate = delegate
+    withExtendedLifetime(delegate) { application.run() }
+}
+
 #if KIYO_TESTING
-if CommandLine.arguments.contains("--sync-test") {
+if CommandLine.arguments.contains("--instance-probe") {
+    runInstanceProbe()
+} else if CommandLine.arguments.contains("--launch-test") {
+    runLaunchTests()
+} else if CommandLine.arguments.contains("--sync-test") {
     runSyncTests()
 } else if CommandLine.arguments.contains("--stress-test") {
     runTypingStressTests()
@@ -1474,15 +1609,9 @@ if CommandLine.arguments.contains("--sync-test") {
     assert(LayoutConverter.convert("Привет") == "Ghbdtn")
     print("Layout conversion checks passed")
 } else {
-    let app = NSApplication.shared
-    let delegate = App()
-    app.delegate = delegate
-    app.run()
+    runApplication()
 }
 
 #else
-let application = NSApplication.shared
-let delegate = App()
-application.delegate = delegate
-application.run()
+runApplication()
 #endif

@@ -14,7 +14,7 @@ KiYo is a macOS utility by [Raven Systems](https://ravensystems.io/) that correc
 
 - Automatic RU/EN layout correction after a space, preserving Tab and Return actions.
 - Optional macOS spelling suggestions, conservative joined-word splitting using the system dictionary and canonical KiYo capitalization.
-- Word exceptions, a configurable selection shortcut and a macOS text Service where supported.
+- Word exceptions, configurable shortcuts for adding exceptions and converting selected text, and a macOS text Service where supported.
 - Notch or menu-bar display, pause, manual correction and opt-in launch at login.
 - Russian/English interface, welcome screen and a separate user guide.
 - Optional preferences and exceptions sync through a user-selected folder, including iCloud Drive.
@@ -45,15 +45,15 @@ To package the built application:
 ./scripts/package-dmg.sh
 ```
 
-The package contains only the app and an Applications link. Generated builds are ignored by Git.
+The package contains the app, an Applications link and a short installation guide. Generated builds are ignored by Git.
 
 ## Use
 
-Allow KiYo in System Settings → Privacy & Security → Accessibility. Enable Russian and English input sources. Layout correction runs after a word boundary. Control + Option + Space manually converts the current buffered word. Single-letter words are deliberately not changed automatically. If a correction is immediately erased completely with Backspace, its original word is preserved on retry for the current session, without changing persistent exceptions.
+Allow KiYo in System Settings → Privacy & Security → Accessibility. Enable Russian and English input sources. Layout correction runs after a word boundary. Control + Option + Space manually converts the current buffered word. Single-letter words are deliberately not changed automatically. If a correction is immediately erased completely with Backspace, its original word is preserved only on the next retry within 15 seconds, without changing persistent exceptions.
 
 Spelling is a separate, optional setting. It uses system dictionaries and can miss names, technical identifiers and ambiguous errors. It does not guarantee correct prose in every editor.
 
-To exclude selected text, press the shortcut shown in Settings → Add selection (default Control + Option + K). Click that button to record your own shortcut. Escape cancels. Secure Input and recognized password/email fields are skipped; custom editors can expose incomplete metadata.
+To exclude selected text, press the shortcut shown in Settings → Add selection (default Control + Option + K). Click that button to record your own shortcut. Escape cancels. Convert selection (default Control + Option + R) changes the layout of selected text, including multiple lines; its shortcut is configurable separately. Secure Input and recognized password/email fields are skipped; custom editors can expose incomplete metadata.
 
 ## Privacy and sync
 
