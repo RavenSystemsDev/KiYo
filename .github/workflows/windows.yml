@@ -1,0 +1,38 @@
+name: Windows alpha
+on:
+  push:
+    branches: [windows]
+    paths: ['Windows/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Core regression tests
+        run: dotnet run --project Windows/KiYo.Tests/KiYo.Tests.csproj -c Release
+      - name: Windows native smoke test
+        run: dotnet run --project Windows/KiYo.Windows.Smoke/KiYo.Windows.Smoke.csproj -c Release
+      - name: Package x64
+        shell: pwsh
+        run: ./Windows/package.ps1 -Runtime win-x64
+      - name: Package ARM64
+        shell: pwsh
+        run: ./Windows/package.ps1 -Runtime win-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KiYo-Windows-alpha
+          path: |
+            Windows/artifacts/*.zip
+            Windows/artifacts/*.sha256
+          if-no-files-found: error
+          retention-days: 14

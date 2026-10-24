@@ -28,3 +28,10 @@ health.json
 .AppleDouble/
 xcuserdata/
 *.xcuserstate
+
+# Windows / .NET
+**/bin/
+**/obj/
+.vs/
+*.user
+Windows/artifacts/

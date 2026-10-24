@@ -1,3 +1,5 @@
+> **Windows development branch.** The first 0.1.0-alpha.1 implementation is in [Windows/](Windows/README.md). The macOS version and DMG remain on [main](https://github.com/RavenSystemsDev/KiYo/tree/main).
+
 <p align="center">
   <img src="Resources/AppIcon.png" width="128" alt="KiYo">
 </p>

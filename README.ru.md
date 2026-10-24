@@ -1,3 +1,5 @@
+> **Windows: ветка разработки.** Первая версия 0.1.0-alpha.1 находится в [Windows/](Windows/README.md). Mac-версия и её DMG доступны в [ветке main](https://github.com/RavenSystemsDev/KiYo/tree/main).
+
 <p align="center">
   <img src="Resources/AppIcon.png" width="128" alt="KiYo">
 </p>

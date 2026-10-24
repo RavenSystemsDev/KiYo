@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationIcon>Assets/KiYo.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>KiYo</AssemblyName>
+    <Version>0.1.0-alpha.1</Version>
+    <Company>Raven Systems</Company>
+    <Product>KiYo for Windows</Product>
+    <Copyright>Copyright © 2026 Raven Systems</Copyright>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../KiYo.Core/KiYo.Core.csproj" />
+    <EmbeddedResource Include="Assets/KiYo.ico" />
+    <Content Include="../../LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../PRIVACY.txt" Link="PRIVACY.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

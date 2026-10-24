@@ -6,8 +6,8 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[1]
-generated = {'.git', 'dist', 'build', 'DerivedData', '.swiftpm', '__pycache__'}
-private_suffixes = {'.pem', '.p12', '.pfx', '.key', '.keychain', '.keychain-db', '.mobileprovision', '.provisionprofile', '.certSigningRequest', '.dmg', '.zip', '.log', '.crash'}
+generated = {'.git', 'dist', 'build', 'DerivedData', '.swiftpm', '__pycache__', 'bin', 'obj', 'artifacts', '.vs'}
+private_suffixes = {'.pem', '.p12', '.pfx', '.key', '.keychain', '.keychain-db', '.mobileprovision', '.provisionprofile', '.certSigningRequest', '.dmg', '.zip', '.log', '.crash', '.exe', '.dll', '.pdb', '.nupkg'}
 patterns = {
     'personal-home-path': re.compile('/' + 'Users/' + r'''[^/\s'"`]+'''),
     'private-key': re.compile(r'-----BEGIN [A-Z ]*PRIVATE KEY-----'),

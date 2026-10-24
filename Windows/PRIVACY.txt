@@ -1,0 +1,30 @@
+KiYo for Windows — privacy (alpha)
+
+KiYo observes keyboard activity locally while it runs, including while paused
+(to recognize activity that cancels a pending operation). It keeps at most one
+64-character token in volatile memory. Pause clears that token. No raw keyboard
+log, telemetry, analytics, account or network service is used.
+
+Before changing text it checks Windows UI Automation information. Password,
+recognized email and read-only fields are skipped. Unknown or unsupported
+controls are skipped. Custom editors may expose incomplete metadata. A field's
+contents can transiently be in memory; do not treat this as a security boundary
+against other processes or memory inspection. No typed content is written to disk.
+
+Manual actions read up to 8192 selected characters. Adding exceptions accepts
+at most 512 selected characters. The clipboard is not read or overwritten.
+Exceptions and settings persist in the current user's LocalAppData folder:
+RavenSystems/KiYo/settings.json. Do not store passwords in exceptions.
+
+The Windows spelling service is used locally to check whether candidate words
+exist in installed en-US/ru-RU dictionaries. KiYo does not alter Windows' personal
+dictionary. Availability depends on installed language features.
+
+Optional launch at login adds only the current user's KiYo value under
+HKCU/Software/Microsoft/Windows/CurrentVersion/Run. Turn it off in Settings before
+moving or deleting a portable installation. No administrator rights are requested.
+
+Feedback opens the user's email program. No text, logs or attachments are added.
+The user chooses whether to send it. Links open the default browser.
+
+Raven Systems — https://ravensystems.io/ — dev@ravensystems.io

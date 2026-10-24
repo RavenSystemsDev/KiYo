@@ -1,0 +1,45 @@
+KiYo for Windows 0.1.0-alpha.1 — Raven Systems
+
+ENGLISH
+Windows 11. Choose win-x64 for Intel/AMD PCs, win-arm64 for ARM PCs.
+Extract the entire ZIP to a permanent folder, e.g. your user Applications folder.
+Run KiYo.exe inside it. .NET is included; no SDK or administrator access is needed.
+Look for KiYo beside the clock (possibly under the hidden-icons arrow).
+Double-click the icon for Settings; right-click for Pause and Quit.
+Enable English (United States) and Russian keyboards in Windows Settings.
+
+Type ghbdtn followed by space using the English layout. In a supported editor
+with accessible editable text and an unchanged caret, KiYo converts it to привет.
+With Russian selected, physical h and i produce рш, corrected to hi after a space.
+Ctrl+Alt+R converts selected text; Ctrl+Alt+K adds selected words to exceptions.
+Change both shortcuts in Settings. Launch at login is optional and off initially.
+Disable it before moving/deleting the portable folder.
+
+Alpha limitations: no Authenticode signing, no installer/updater, no iCloud sync,
+no automatic spelling fixes. Windows dictionaries help detect layout mistakes;
+install Russian language spelling features for a wider vocabulary. Fast typing
+that changes the text before validation cancels that correction. Unsupported,
+protected, read-only, elevated and remote/custom editors may be skipped. KiYo
+does not elevate itself or bypass Windows restrictions. This build needs physical
+keyboard acceptance testing on Windows before it is called stable.
+
+RUSSIAN
+Windows 11. win-x64 — компьютеры Intel/AMD; win-arm64 — компьютеры ARM.
+Распакуйте ВЕСЬ архив в постоянную папку и запустите KiYo.exe.
+Значок появится возле часов, иногда под стрелкой скрытых значков.
+Двойной щелчок — настройки; правая кнопка — пауза и выход.
+Добавьте английскую (США) и русскую раскладки в настройках Windows.
+
+ghbdtn + пробел → привет. рш + пробел → hi.
+Ctrl+Alt+R — исправить выделенный текст; Ctrl+Alt+K — добавить в исключения.
+Сочетания настраиваются. Автозапуск включается по желанию.
+Перед переносом или удалением папки отключите автозапуск.
+
+Это первая alpha: требуется проверка физическим вводом на Windows.
+Если ввод уже продолжился, курсор сдвинулся или поле недоступно, правка
+пропускается. Проверка орфографии и синхронизация пока не перенесены.
+Сборка не подписана Authenticode; не отключайте защиту Windows.
+
+Author: Raven Systems — https://ravensystems.io/
+Feedback: dev@ravensystems.io
+License and privacy: LICENSE.txt, PRIVACY.txt, THIRD-PARTY-NOTICES.txt

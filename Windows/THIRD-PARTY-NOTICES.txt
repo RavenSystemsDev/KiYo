@@ -1,0 +1,15 @@
+KiYo for Windows
+
+KiYo code and approved brand graphics: Copyright (c) 2026 Raven Systems.
+See LICENSE.txt for the KiYo Source-Available License 1.0.
+The internal word lists are ported from KiYo's own macOS source.
+
+Microsoft .NET / Windows Forms / WPF runtime
+https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+https://github.com/dotnet/winforms/blob/main/LICENSE.TXT
+https://github.com/dotnet/wpf/blob/main/LICENSE.TXT
+These projects are distributed under the MIT license with applicable third-party
+notices. Self-contained builds include Microsoft's LICENSE.txt and
+ThirdPartyNotices.txt under runtime-notices/. System Windows components and
+fonts remain subject to Microsoft's terms. Windows UI Automation and Spell
+Checking are operating-system services, not third-party code copied into KiYo.
