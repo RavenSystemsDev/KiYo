@@ -14,7 +14,7 @@ public static class Layouts
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream($"KiYo.Core.Words.{lang}.txt")!;
         using var reader = new StreamReader(stream);
-        return reader.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return reader.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
     public static bool IsRussian(string text) => text.Any(c => c is >= 'А' and <= 'я' or 'Ё' or 'ё');
     public static bool IsLetter(char c) => c is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= 'А' and <= 'я' or 'Ё' or 'ё';
