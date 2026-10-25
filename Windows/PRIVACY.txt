@@ -1,9 +1,13 @@
 KiYo for Windows — privacy (alpha)
 
 KiYo observes keyboard activity locally while it runs, including while paused
-(to recognize activity that cancels a pending operation). It keeps at most one
-64-character token in volatile memory. Pause clears that token. No raw keyboard
-log, telemetry, analytics, account or network service is used.
+(to recognize activity that cancels a pending operation). It keeps a bounded
+suffix of up to 1024 observed characters in volatile memory, with tokens limited
+to 64 characters, so fast typing can be corrected without losing pending words.
+Temporary candidate and provider snapshots of that suffix may also exist while
+work runs. Pause clears pending state; idle state expires after two seconds.
+A stalled system provider may retain its captured snapshot until it returns.
+No raw keyboard log, telemetry, analytics, account or network service is used.
 
 Before changing text it checks Windows UI Automation information. Password,
 recognized email and read-only fields are skipped. Unknown or unsupported

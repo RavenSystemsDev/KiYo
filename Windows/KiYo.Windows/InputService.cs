@@ -8,6 +8,8 @@ internal sealed class InputService : IDisposable
     private readonly Func<Preferences> preferences;
     private readonly Action<string> report;
     private readonly TypingState state = new();
+    private readonly CorrectionSchedule schedule = new();
+    private readonly System.Windows.Forms.Timer timer = new() { Interval = 15 };
     private readonly Native.Hook keyboardCallback, mouseCallback;
     private nint keyboard, mouse;
     private bool busy, disposed;
@@ -19,6 +21,7 @@ internal sealed class InputService : IDisposable
         keyboard = Native.SetWindowsHookEx(13, keyboardCallback, Native.GetModuleHandle(null), 0);
         mouse = Native.SetWindowsHookEx(14, mouseCallback, Native.GetModuleHandle(null), 0);
         if (!Available) { Dispose(); throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error()); }
+        timer.Tick += (_, _) => Pump(); timer.Start();
     }
     internal void Reset() => state.Invalidate();
     private nint Mouse(int code, nint message, nint data)
@@ -41,61 +44,80 @@ internal sealed class InputService : IDisposable
         var e = Marshal.PtrToStructure<Native.KeyboardEvent>(data);
         if (e.Extra == Native.Tag) return Native.CallNextHookEx(keyboard, code, message, data);
         if ((e.Flags & 0x10) != 0) { state.Invalidate(); return Native.CallNextHookEx(keyboard, code, message, data); }
+        schedule.Activity(Environment.TickCount64);
         if ((long)message is not (0x100 or 0x104)) return Native.CallNextHookEx(keyboard, code, message, data);
         var window = Native.GetForegroundWindow();
         var thread = Native.GetWindowThreadProcessId(window, out var pid);
         var layout = Native.GetKeyboardLayout(thread);
-        state.Context(window, layout);
+        state.Context(window, layout, Native.Focus(window));
         if (!preferences().Enabled || pid == Environment.ProcessId || !Native.SupportedLayout(layout)) state.Invalidate();
         else if (Native.Down(0x11) || Native.Down(0x12) || Native.Down(0x5B) || Native.Down(0x5C) || e.Key is 0x11 or 0x12 or 0x5B or 0x5C) state.Invalidate();
         else if (e.Key == 8) state.Backspace(DateTimeOffset.UtcNow);
-        else if (e.Key == 0x20)
-        {
-            var attempt = state.Space(DateTimeOffset.UtcNow);
-            if (attempt != null && !busy) { busy = true; dispatcher.BeginInvoke(() => CorrectAsync(attempt)); }
-        }
+        else if (e.Key == 0x20) state.Space(DateTimeOffset.UtcNow);
         else if (e.Key is 0x10 or 0xA0 or 0xA1) { /* Shift alone does not split a word. */ }
         else if (Native.Translate(e, layout) is char c) state.Character(c);
         else state.Invalidate();
         // Always forward real keyboard events, including space/tab/enter and key-up.
         return Native.CallNextHookEx(keyboard, code, message, data);
     }
-    private async void CorrectAsync(WordAttempt attempt)
+    private void Pump()
+    {
+        if (disposed) return;
+        var now = Environment.TickCount64;
+        if (schedule.Expired(now)) { if (state.HasObserved) state.Invalidate(); return; }
+        var attempt = state.Snapshot();
+        if (attempt == null) return;
+        if (!preferences().Enabled || Native.GetForegroundWindow() != attempt.Window || Native.Focus(attempt.Window) != attempt.Focus)
+        { state.Invalidate(); return; }
+        if (!busy && schedule.Ready(now) && !Native.ModifiersDown())
+        { busy = true; CorrectAsync(attempt); }
+    }
+    private async void CorrectAsync(PhraseAttempt attempt)
     {
         var started = Stopwatch.StartNew();
         var options = preferences();
-        var deferred = false;
         try
         {
-            // Let the original space reach the focused editor before reading its caret.
-            await Task.Delay(8);
-            if (disposed || !state.Current(attempt)) return;
-            var work = Task.Run(() =>
+            // Only one provider operation is outstanding. While it runs, the hook
+            // keeps appending words; the timer retries the latest suffix afterwards.
+            var (analysis, snapshot) = await Task.Run(() =>
             {
-                using var dictionary = new SystemDictionary();
-                var correction = Layouts.Correct(attempt.Word, options.ShortWords, options.Exclusions,
-                    options.UseSystemDictionary ? dictionary.Valid : null);
-                if (correction == null) return ((TextSnapshot?)null, (string?)null);
-                var snapshot = TextAccess.Read(attempt.Window, attempt.Word + " ");
-                if (snapshot == null || !TextAccess.StillSelected(snapshot)) return ((TextSnapshot?)null, (string?)null);
-                return (snapshot, correction);
+                SystemDictionary? dictionary = null;
+                try
+                {
+                    var analysis = PhraseCorrection.Analyze(attempt, (original, candidate) =>
+                        Layouts.CorrectBuffered(original, candidate, options.ShortWords, options.Exclusions,
+                            options.UseSystemDictionary ? (text, ru) => (dictionary ??= new()).Valid(text, ru) : null));
+                    if (!analysis.Changed) return (analysis, (TextSnapshot?)null);
+                    var snapshot = TextAccess.Read(attempt.Window, attempt.Text);
+                    return (analysis, snapshot != null && TextAccess.StillSelected(snapshot) ? snapshot : null);
+                }
+                finally { dictionary?.Dispose(); }
             });
-            // One outstanding provider read at most. An unresponsive editor never blocks typing.
-            if (await Task.WhenAny(work, Task.Delay(180)) != work)
+            if (disposed || !preferences().Enabled || schedule.Expired(Environment.TickCount64)) return;
+            // Results for still-present words remain useful even when newer input
+            // made the captured caret/text stale. Never apply a stale replacement.
+            state.Remember(analysis);
+            if (!state.Current(attempt) || !analysis.Changed) return;
+            if (snapshot == null || started.ElapsedMilliseconds > 250 || Native.ModifiersDown() ||
+                !schedule.Ready(Environment.TickCount64))
             {
-                deferred = true;
-                _ = work.ContinueWith(t => { _ = t.Exception; Post(() => busy = false); }, TaskScheduler.Default);
+                if (!schedule.Retry(attempt.Revision, Environment.TickCount64)) state.Invalidate();
                 return;
             }
-            var (snapshot, correction) = await work;
-            if (snapshot == null || correction == null || started.ElapsedMilliseconds > 180 || disposed || !preferences().Enabled ||
-                !state.Current(attempt) || Native.GetForegroundWindow() != attempt.Window || Native.Focus(attempt.Window) != snapshot.Focus || Native.ModifiersDown()) return;
-            if (!Native.Replace(attempt.Word.Length + 1, correction + " ")) { state.Invalidate(); report("inputFailed"); return; }
-            state.Corrected(attempt, correction.Length, DateTimeOffset.UtcNow);
-            Native.RequestLayout(attempt.Window, Layouts.IsRussian(correction));
+            if (Native.GetForegroundWindow() != attempt.Window || Native.Focus(attempt.Window) != snapshot.Focus)
+            { state.Invalidate(); return; }
+            if (!Native.Replace(attempt.Text.Length, analysis.Replacement))
+            { state.Invalidate(); report("inputFailed"); return; }
+            var requestedLayout = analysis.LayoutWord is { } last
+                ? Native.RequestLayout(attempt.Window, Layouts.IsRussian(last)) : 0;
+            if (!state.Applied(analysis, requestedLayout, DateTimeOffset.UtcNow)) state.Invalidate();
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException) { /* Unsupported providers: preserve original input, never log words. */ }
-        finally { if (!deferred) busy = false; }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            if (state.Current(attempt) && !schedule.Retry(attempt.Revision, Environment.TickCount64)) state.Invalidate();
+        }
+        finally { busy = false; }
     }
     internal async void Selection(bool addExclusion, Action<string[]> add)
     {
@@ -140,7 +162,7 @@ internal sealed class InputService : IDisposable
     private void Post(Action action) { if (!disposed && !dispatcher.IsDisposed) try { dispatcher.BeginInvoke(action); } catch (InvalidOperationException) { } }
     public void Dispose()
     {
-        disposed = true; state.Invalidate();
+        disposed = true; timer.Stop(); timer.Dispose(); state.Invalidate();
         if (keyboard != 0) Native.UnhookWindowsHookEx(keyboard);
         if (mouse != 0) Native.UnhookWindowsHookEx(mouse);
         keyboard = mouse = 0;

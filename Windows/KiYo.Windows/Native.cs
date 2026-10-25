@@ -57,11 +57,11 @@ internal static class Native
         foreach (var c in replacement) { inputs.Add(Unicode(c, false)); inputs.Add(Unicode(c, true)); }
         return inputs.Count > 0 && SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<Input>()) == inputs.Count;
     }
-    internal static void RequestLayout(nint window, bool russian)
+    internal static nint RequestLayout(nint window, bool russian)
     {
         var layouts = new nint[GetKeyboardLayoutList(0, null)];
         GetKeyboardLayoutList(layouts.Length, layouts);
         var target = layouts.FirstOrDefault(h => ((long)h & 0xFFFF) == (russian ? 0x0419 : 0x0409));
-        if (target != 0) PostMessage(window, 0x50, 0, target);
+        return target != 0 && PostMessage(window, 0x50, 0, target) ? target : 0;
     }
 }

@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using KiYo.Windows;
+if (args is ["--fixture", var mode, var file]) { Fixture.Run(mode, file); return; }
 if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Run this smoke test on Windows.");
 var expected = Environment.Is64BitProcess ? 40 : 28;
 if (Marshal.SizeOf<Native.Input>() != expected) throw new Exception("INPUT ABI mismatch");
@@ -17,4 +18,6 @@ var hook = Native.SetWindowsHookEx(13, callback, Native.GetModuleHandle(null), 0
 if (hook == 0) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
 Native.UnhookWindowsHookEx(hook);
 GC.KeepAlive(callback);
-Console.WriteLine("PASS: Windows input ABI, keyboard layouts, read-only spelling COM and hook installation. No text injected.");
+Console.WriteLine("PASS: Windows input ABI, keyboard layouts, read-only spelling COM and hook installation.");
+
+Fixture.Verify();

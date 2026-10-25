@@ -50,6 +50,26 @@ foreach (var c in "ghbdtn") typing.Character(c);
 Check(typing.Space(now) == null, "manual rejection respected once");
 Check(Word(typing, "ghbdtn") != null, "rejection not permanent");
 
+// Model the real sequence: correction changes the OS layout before Backspace.
+typing.Invalidate(); typing.Context(1, 0x419);
+attempt = Word(typing, "рш"); typing.Corrected(attempt, 2, now, 0x409);
+typing.Context(1, 0x409);
+for (int i = 0; i < 3; i++) typing.Backspace(now);
+foreach (var c in "рш") typing.Character(c);
+Check(typing.Space(now) == null, "own layout switch preserves one manual retry");
+Check(Word(typing, "рш") != null, "own layout retry only applies once");
+typing.Invalidate(); typing.Context(1, 0x419);
+attempt = Word(typing, "рш"); typing.Corrected(attempt, 2, now, 0x409);
+typing.Context(2, 0x409);
+for (int i = 0; i < 3; i++) typing.Backspace(now);
+Check(Word(typing, "рш") != null, "other window cannot inherit manual retry");
+typing.Invalidate(); typing.Context(1, 0x419);
+attempt = Word(typing, "рш"); typing.Corrected(attempt, 2, now, 0x409);
+typing.Context(1, 0x409);
+for (int i = 0; i < 3; i++) typing.Backspace(now);
+typing.Invalidate();
+Check(Word(typing, "рш") != null, "mouse or settings change discards manual retry");
+
 var pref = new Preferences { Language = "bad", Exclusions = ["HELLO", "hello", "bad\nword"], ConvertShortcut = new(0, 0), ExcludeShortcut = new(0, 0) }.Normalize();
 Equal("system", pref.Language, "invalid language");Equal(1, pref.Exclusions.Length, "sanitize exclusions");
 Check(pref.ConvertShortcut.Valid && pref.ExcludeShortcut.Valid, "normalize hotkeys");
@@ -76,4 +96,5 @@ for (int i = 0; i < 10000; i++)
   typing.Corrected(word, output.Length, now);
  }
 }
+assertions += FastTypingTests.Run();
 Console.WriteLine($"PASS: {assertions} assertions; 10,000 alternating phrases in {timer.ElapsedMilliseconds} ms. No system input was generated.");

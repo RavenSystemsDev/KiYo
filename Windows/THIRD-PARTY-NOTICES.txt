@@ -9,7 +9,7 @@ https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
 https://github.com/dotnet/winforms/blob/main/LICENSE.TXT
 https://github.com/dotnet/wpf/blob/main/LICENSE.TXT
 These projects are distributed under the MIT license with applicable third-party
-notices. Self-contained builds include Microsoft's LICENSE.txt and
-ThirdPartyNotices.txt under runtime-notices/. System Windows components and
+notices. Self-contained builds include the license and third-party notice files
+provided by the exact Microsoft runtime packages under runtime-notices/. System Windows components and
 fonts remain subject to Microsoft's terms. Windows UI Automation and Spell
 Checking are operating-system services, not third-party code copied into KiYo.

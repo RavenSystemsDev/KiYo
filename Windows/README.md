@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.1
+# KiYo for Windows — 0.1.0-alpha.2
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.
@@ -29,7 +29,10 @@ dotnet run --project Windows/KiYo.Windows.Smoke/KiYo.Windows.Smoke.csproj -c Rel
 Core tests also run on macOS/Linux. Cross-compilation on macOS verifies C# and
 Windows reference assemblies, not real Windows behavior. The smoke project must
 run on Windows and checks the native input ABI, OS dictionaries, layouts and hook
-installation without injecting text. GitHub Actions builds both portable archives.
+installation. It also opens its own isolated test editor, verifies that password, email
+and read-only fields are rejected, and tests selected-text/tail replacement there.
+This requires an interactive Windows desktop; it never targets an existing user
+document. GitHub Actions is configured to build both portable archives.
 It does not publish them as a stable release automatically.
 
 The archives include .NET and runtime license notices. Extract the full folder,
@@ -38,18 +41,34 @@ Settings: `%LOCALAPPDATA%\RavenSystems\KiYo\settings.json`.
 
 ## Input behavior and acceptance checks
 
-Real key events are always forwarded, never queued or swallowed. UI Automation
-and spelling checks run off the hook thread with bounded acceptance deadlines.
-Only the observed word immediately before the caret is checked. A new key, mouse
-action, changed layout/focus or setting invalidates the pending replacement.
-Replacement uses one `SendInput` batch, only if the original field still matches.
-Windows UIPI can reject injection; KiYo pauses if a replacement cannot complete.
-No focus is forcibly changed. A timing window between validation and injection
-cannot be made an atomic transaction with external editors.
+Real key events are always forwarded, never queued or swallowed. Completed words
+remain pending when more characters arrive or the single background worker is
+busy. After a short quiet interval (25 ms), KiYo checks the latest observed suffix
+against the editable field. A stale read is retried with the newest suffix;
+already-resolved word decisions are reused. The unfinished next word is replayed
+unchanged, and a layout switch is deferred until a completed-word boundary.
 
-This intentionally skips correction when typing continues before validation; it
-is not yet a promise of zero skipped words at every typing speed. A slow provider
-can disable new requests until its one outstanding call returns; typing continues.
+The suffix is limited to 1024 characters, individual tokens to 64 characters.
+A mouse action, navigation, Backspace, external layout/focus change, paste, pause
+or setting change invalidates older candidates. UI Automation validates the field,
+selection and exact tail text again before returning. Replacement is one SendInput
+batch with a final input-revision and native-focus check. Read failures back off
+and stop after five attempts for unchanged input; idle pending text expires after
+two seconds. An unresponsive provider keeps at most one outstanding call; typing
+continues. Words beyond the bounded suffix and unsupported fields can be skipped.
+
+Windows UIPI can reject injection; KiYo pauses if a replacement cannot complete.
+No focus is forcibly changed. Validation and replacement cannot be made an atomic
+transaction with external editors, so real-editor acceptance remains required.
+See Microsoft's [SendInput documentation](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput)
+and [UI Automation threading guidance](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-threading).
+
+Fast-input regression tests use a virtual editor/clock: 90 speed/delay combinations
+and 1,000 jittered three-phrase sequences, plus partial words, delayed layout
+acknowledgment, double spaces, exceptions, cancellation and bounded memory.
+These tests do not replace physical Windows input testing. The native test harness
+also covers full-burst/partial-tail replacement and changed-text/caret rejection
+in its own isolated editor; it must be run on Windows.
 
 Before public release, test with a physical keyboard in Notepad, Word and at least
 one Chromium/Electron editor:

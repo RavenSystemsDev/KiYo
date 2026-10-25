@@ -54,6 +54,16 @@ public static class Layouts
             return converted + suffix;
         return null;
     }
+    public static string? CorrectBuffered(string original, string candidate, bool shortWords,
+        IEnumerable<string> exclusions, Func<string, bool, bool?>? valid = null)
+    {
+        if (Protected(original, exclusions) || Protected(candidate, exclusions)) return null;
+        var corrected = Correct(candidate, shortWords, exclusions, valid);
+        // Candidate differs only when our own asynchronous layout request landed
+        // after a prefix was already typed. Preserve the same physical keys.
+        var result = corrected ?? (candidate != original ? candidate : null);
+        return result == original ? null : result;
+    }
     public static string ConvertSelection(string text)
     {
         if (text.Length > 8192) throw new ArgumentOutOfRangeException(nameof(text));
