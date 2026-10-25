@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Windows.Automation;
 using KiYo.Windows;
 using KiYo.Core;
 using Forms = System.Windows.Forms;
@@ -64,6 +65,12 @@ internal static class Fixture
                 SetForegroundWindow(window);
                 Thread.Sleep(200);
                 if (Native.GetForegroundWindow() != window) throw new Exception("Windows test runner has no foreground desktop for UI Automation acceptance");
+                if (mode == "email")
+                {
+                    // Synthetic fixture metadata only; production never logs field contents.
+                    var focused = AutomationElement.FocusedElement.Current;
+                    Console.WriteLine($"Email fixture: UIA name='{focused.Name}', class='{focused.ClassName}', framework='{focused.FrameworkId}'");
+                }
                 var snapshot = TextAccess.Read(window, mode == "selected" ? null : Body(mode));
                 if (mode is "password" or "readonly" or "email")
                 {

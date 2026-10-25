@@ -31,6 +31,8 @@ Windows reference assemblies, not real Windows behavior. The smoke project must
 run on Windows and checks the native input ABI, OS dictionaries, layouts and hook
 installation. It also opens its own isolated test editor, verifies that password, email
 and read-only fields are rejected, and tests selected-text/tail replacement there.
+Email/password labels are checked through UI Automation and focused-control MSAA
+metadata, including controls whose native UIA provider omits their accessible name.
 This requires an interactive Windows desktop; it never targets an existing user
 document. GitHub Actions is configured to build both portable archives.
 It does not publish them as a stable release automatically.

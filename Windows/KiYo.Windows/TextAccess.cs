@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows.Automation;
 using System.Windows.Automation.Text;
 namespace KiYo.Windows;
@@ -11,13 +12,39 @@ internal static class TextAccess
         if (pid == Environment.ProcessId) return null;
         var element = AutomationElement.FocusedElement;
         if (element == null || element.Current.ProcessId != pid || element.Current.IsPassword || !element.Current.IsEnabled) return null;
-        var description = string.Join(" ", element.Current.Name, element.Current.HelpText, element.Current.AutomationId).ToLowerInvariant();
-        if (new[] { "password", "passcode", "парол", "email", "e-mail", "электронн" }.Any(description.Contains)) return null;
+        if (Sensitive(element.Current.Name, element.Current.HelpText, element.Current.AutomationId,
+            element.Current.LabeledBy?.Current.Name) || NativeSensitiveField(window, pid)) return null;
         if (!element.TryGetCurrentPattern(TextPattern.Pattern, out var raw) || raw is not TextPattern pattern) return null;
         // Read-only web content and custom controls with unknown writability fail closed.
         var readOnly = pattern.DocumentRange.GetAttributeValue(TextPattern.IsReadOnlyAttribute);
         if (readOnly is not bool writable || writable) return null;
         return element;
+    }
+    private static bool Sensitive(params string?[] descriptions) => descriptions.Any(text => text != null &&
+        new[] { "password", "passcode", "парол", "email", "e-mail", "электронн" }
+            .Any(marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase)));
+
+    [DllImport("oleacc.dll", ExactSpelling = true)]
+    private static extern int AccessibleObjectFromWindow(nint window, uint objectId, ref Guid interfaceId,
+        [MarshalAs(UnmanagedType.Interface)] out Accessibility.IAccessible? accessible);
+
+    private static bool NativeSensitiveField(nint window, uint processId)
+    {
+        // RichEdit's native UIA provider can omit a WinForms AccessibleName.
+        // Also inspect the focused HWND's MSAA metadata; never read accValue.
+        var focus = Native.Focus(window);
+        if (focus == 0) return false;
+        Native.GetWindowThreadProcessId(focus, out var focusedProcess);
+        if (focusedProcess != processId) return true;
+        var iid = typeof(Accessibility.IAccessible).GUID;
+        var result = AccessibleObjectFromWindow(focus, 0xFFFFFFFC, ref iid, out var accessible); // OBJID_CLIENT
+        if (result < 0 || accessible == null) return false; // UIA-only control
+        try
+        {
+            if (accessible.get_accState(0) is int state && (state & 0x20000000) != 0) return true; // STATE_SYSTEM_PROTECTED
+            return Sensitive(accessible.get_accName(0));
+        }
+        finally { if (Marshal.IsComObject(accessible)) Marshal.ReleaseComObject(accessible); }
     }
     internal static TextSnapshot? Read(nint window, string? expectedTail)
     {
