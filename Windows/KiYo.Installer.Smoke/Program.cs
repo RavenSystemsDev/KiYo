@@ -63,7 +63,7 @@ try
     using (var key = Registry.CurrentUser.OpenSubKey(uninstallKey))
     {
         Check(key?.GetValue("DisplayName") is string name && name.Contains("KiYo"), "Registered in Windows Apps");
-        Check(key?.GetValue("DisplayVersion") as string == "0.1.0-alpha.7", "Installed version is alpha.7");
+        Check(key?.GetValue("DisplayVersion") as string == "0.1.0-alpha.8", "Installed version is alpha.8");
     }
     Check(State(window, "Запускать при входе в Windows") == ToggleState.Off, "Autostart defaults off");
     Toggle(window, "Запускать при входе в Windows");
@@ -227,13 +227,22 @@ static void Toggle(AutomationElement window, string name) =>
 void CheckSettings(Process app)
 {
     using var signal = EventWaitHandle.OpenExisting(@"Local\RavenSystems.KiYo.ShowSettings");
-    signal.Set();
-    AutomationElement? window = null;
-    Wait(() => (window = AutomationElement.RootElement.FindFirst(TreeScope.Children, new AndCondition(
-        new PropertyCondition(AutomationElement.ProcessIdProperty, app.Id),
-        new PropertyCondition(AutomationElement.NameProperty, "Настройки KiYo")))) is not null);
-    Wait(() => Find(window!, "Сохранить") is not null);
-    var settings = window!;
+    AutomationElement OpenSettings(string title)
+    {
+        signal.Set(); AutomationElement? found = null;
+        Wait(() => (found = AppWindow(title)) is not null);
+        Wait(() => Find(found!, title == "KiYo settings" ? "Save" : "Сохранить") is not null);
+        return found!;
+    }
+    AutomationElement? AppWindow(string title) => AutomationElement.RootElement.FindFirst(TreeScope.Children, new AndCondition(
+        new PropertyCondition(AutomationElement.ProcessIdProperty, app.Id), new PropertyCondition(AutomationElement.NameProperty, title)));
+    AutomationElement Control(AutomationElement window, string name, ControlType type) => window.FindFirst(TreeScope.Descendants, new AndCondition(
+        new PropertyCondition(AutomationElement.ControlTypeProperty, type), new PropertyCondition(AutomationElement.NameProperty, name),
+        new PropertyCondition(AutomationElement.IsOffscreenProperty, false))) ?? throw new Exception("Control not found: " + name);
+    void Press(AutomationElement window, string name) => ((InvokePattern)Control(window, name, ControlType.Button).GetCurrentPattern(InvokePattern.Pattern)).Invoke();
+    void SelectTab(AutomationElement window, string name) => ((SelectionItemPattern)Control(window, name, ControlType.RadioButton).GetCurrentPattern(SelectionItemPattern.Pattern)).Select();
+    void Close(AutomationElement window) => ((WindowPattern)window.GetCurrentPattern(WindowPattern.Pattern)).Close();
+    var settings = OpenSettings("Настройки KiYo");
     var bounds = settings.Current.BoundingRectangle;
     var area = System.Windows.Forms.Screen.FromHandle((nint)settings.Current.NativeWindowHandle).WorkingArea;
     Check(bounds.Left >= area.Left && bounds.Top >= area.Top && bounds.Right <= area.Right && bounds.Bottom <= area.Bottom,
@@ -244,46 +253,86 @@ void CheckSettings(Process app)
         var rect = element.Current.BoundingRectangle;
         Check(!rect.IsEmpty && rect.Width > 0 && rect.Height > 0 && bounds.Contains(rect), "Settings control fully visible: " + name);
     }
-    void NoPageScrolling()
+    void NoPageScrolling(bool english = false)
     {
         foreach (AutomationElement element in settings.FindAll(TreeScope.Descendants, Condition.TrueCondition))
         {
-            if (element.Current.IsOffscreen || element.Current.ControlType == ControlType.Edit) continue;
+            if (element.Current.IsOffscreen || element.Current.ControlType == ControlType.Edit || element.Current.AutomationId == "ExceptionsScroll") continue;
             if (element.TryGetCurrentPattern(ScrollPattern.Pattern, out var value))
             {
                 var scroll = ((ScrollPattern)value).Current;
                 Check(!scroll.HorizontallyScrollable && !scroll.VerticallyScrollable, "Settings container needs no scrolling");
             }
         }
-        Visible("Сохранить"); Visible("Ошибка или идея?"); Visible("Raven Systems · ravensystems.io");
+        Visible(english ? "Save" : "Сохранить"); Visible(english ? "Bug or idea?" : "Ошибка или идея?"); Visible("Raven Systems");
+        Visible(english ? "User guide" : "Инструкция"); Visible(english ? "About KiYo" : "О KiYo");
     }
     foreach (var name in new[] { "Язык приложения", "Запуск при входе", "Автоисправление", "Исправление орфографии", "Короткие слова", "Словарь для раскладки" }) Visible(name);
-    NoPageScrolling();
-    Capture(settings, "06-settings-general-ru.png");
-    // The WinForms provider may expose only the selected tab. Exercise the
-    // standard keyboard navigation while focus belongs to this test app.
-    var tab = Find(settings, "Основные") ?? throw new Exception("General tab missing");
-    tab.SetFocus();
-    Check(Native.GetForegroundWindow() == (nint)settings.Current.NativeWindowHandle, "Settings owns focus before tab navigation");
-    Exception? navigationError = null;
-    var keyboard = new Thread(() =>
+    var auto = (TogglePattern)Control(settings, "Автоисправление", ControlType.CheckBox).GetCurrentPattern(TogglePattern.Pattern);
+    Check(auto.Current.ToggleState == ToggleState.Off, "Auto correction reflects existing preferences");
+    auto.Toggle(); Wait(() => auto.Current.ToggleState == ToggleState.On); auto.Toggle();
+    Wait(() => auto.Current.ToggleState == ToggleState.Off);
+    Check(auto.Current.ToggleState == ToggleState.Off, "Switch responds without applying before Save");
+    NoPageScrolling(); Capture(settings, "06-settings-general-ru.png");
+    void Info(string button, string title, string screenshot, string expected)
     {
-        try { System.Windows.Forms.SendKeys.SendWait("{RIGHT}"); }
-        catch (Exception error) { navigationError = error; }
-    });
-    keyboard.SetApartmentState(ApartmentState.STA); keyboard.Start(); keyboard.Join();
-    if (navigationError is not null) throw navigationError;
+        var click = Task.Run(() => Press(settings, button));
+        Wait(() => AppWindow(title) is not null);
+        var info = AppWindow(title)!; Wait(() => Find(info, expected) is not null);
+        Check(Find(info, expected) is not null, "Information window has expected content: " + title);
+        Capture(info, screenshot); Press(info, "Готово");
+        Wait(() => AppWindow(title) is null); click.GetAwaiter().GetResult();
+    }
+    Info("Инструкция", "Инструкция KiYo", "08-user-guide-ru.png", "Начало работы");
+    Info("О KiYo", "О KiYo", "09-about-ru.png", "Лицензия");
+    SelectTab(settings, "Сочетания и исключения");
     Wait(() => Find(settings, "Исправить выделение") is not null);
     Visible("Исправить выделение"); Visible("Добавить в исключения");
-    var editor = settings.FindFirst(TreeScope.Descendants, new AndCondition(
-        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-        new PropertyCondition(AutomationElement.IsOffscreenProperty, false))) ?? throw new Exception("Exceptions editor missing");
-    ((ValuePattern)editor.GetCurrentPattern(ValuePattern.Pattern)).SetValue(string.Join("\r\n", Enumerable.Range(1, 80).Select(i => "example" + i)));
-    NoPageScrolling();
-    Capture(settings, "07-settings-shortcuts-ru.png");
-    // Closing without Save must leave the stored exceptions untouched.
-    ((WindowPattern)settings.GetCurrentPattern(WindowPattern.Pattern)).Close();
-    Check(File.ReadAllText(preferences).Contains("installertestword"), "Closing settings preserves existing exclusions");
+    var editor = Control(settings, "Введите слово", ControlType.Edit);
+    var input = (ValuePattern)editor.GetCurrentPattern(ValuePattern.Pattern);
+    void Add(string word)
+    {
+        input.SetValue(word); Press(settings, "Добавить");
+        Wait(() => input.Current.Value.Length == 0);
+    }
+    string beforeDraft = File.ReadAllText(preferences);
+    Add("draftword"); Press(settings, "Удалить draftword");
+    Wait(() => Find(settings, "Удалить draftword") is null);
+    Check(File.ReadAllText(preferences) == beforeDraft, "Adding and removing exceptions does not write before Save");
+    input.SetValue("two words"); Press(settings, "Добавить");
+    Wait(() => Find(settings, "Введите одно слово длиной до 64 символов.") is not null);
+    input.SetValue("");
+    for (int i = 1; i <= 20; i++) Add("example" + i);
+    NoPageScrolling(); Capture(settings, "07-settings-shortcuts-ru.png");
+    // Closing a changed draft must leave the saved file byte-for-byte intact.
+    Close(settings); Wait(() => AppWindow("Настройки KiYo") is null);
+    Check(File.ReadAllText(preferences) == beforeDraft, "Closing without Save preserves existing preferences exactly");
+    settings = OpenSettings("Настройки KiYo"); bounds = settings.Current.BoundingRectangle;
+    SelectTab(settings, "Сочетания и исключения");
+    Wait(() => Find(settings, "Введите слово") is not null);
+    input = (ValuePattern)Control(settings, "Введите слово", ControlType.Edit).GetCurrentPattern(ValuePattern.Pattern);
+    Add("savedword");
+    SelectTab(settings, "Основные");
+    var language = Control(settings, "Язык приложения", ControlType.ComboBox);
+    ((ExpandCollapsePattern)language.GetCurrentPattern(ExpandCollapsePattern.Pattern)).Expand();
+    AutomationElement? englishItem = null;
+    Wait(() => (englishItem = language.FindFirst(TreeScope.Descendants, new AndCondition(
+        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ListItem), new PropertyCondition(AutomationElement.NameProperty, "English")))) is not null);
+    ((SelectionItemPattern)englishItem!.GetCurrentPattern(SelectionItemPattern.Pattern)).Select();
+    ((ExpandCollapsePattern)language.GetCurrentPattern(ExpandCollapsePattern.Pattern)).Collapse();
+    Press(settings, "Сохранить"); Wait(() => AppWindow("Настройки KiYo") is null);
+    using (var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(preferences)))
+    {
+        Check(json.RootElement.GetProperty("Language").GetString() == "en", "Language choice saved");
+        var exclusions = json.RootElement.GetProperty("Exclusions").EnumerateArray().Select(value => value.GetString()).ToArray();
+        Check(exclusions.Contains("installertestword") && exclusions.Contains("savedword") && !exclusions.Contains("draftword"), "Save preserves existing exceptions and applies new ones");
+        Check(!json.RootElement.GetProperty("Enabled").GetBoolean(), "Unchanged auto correction preference preserved");
+    }
+    settings = OpenSettings("KiYo settings"); bounds = settings.Current.BoundingRectangle;
+    NoPageScrolling(true); Capture(settings, "10-settings-general-en.png");
+    SelectTab(settings, "Shortcuts and exceptions"); Wait(() => Find(settings, "Convert selection") is not null);
+    NoPageScrolling(true); Capture(settings, "11-settings-shortcuts-en.png");
+    Close(settings);
 }
 void Capture(AutomationElement window, string name)
 {

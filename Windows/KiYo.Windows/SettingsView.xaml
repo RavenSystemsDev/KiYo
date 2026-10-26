@@ -1,0 +1,37 @@
+<UserControl x:Class="KiYo.Windows.SettingsView" x:ClassModifier="internal" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" FontFamily="Segoe UI" FontSize="14" Background="#19191B" Foreground="#F4F4F5" UseLayoutRounding="True">
+  <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Theme.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
+  <Grid Margin="22,14,22,0">
+    <Grid.RowDefinitions><RowDefinition Height="38"/><RowDefinition Height="*"/><RowDefinition Height="38"/><RowDefinition Height="60"/></Grid.RowDefinitions>
+    <Border Background="#111113" CornerRadius="9" Padding="3"><UniformGrid Columns="2"><RadioButton x:Name="GeneralTab" GroupName="Page" Style="{StaticResource Nav}" Checked="PageChanged"/><RadioButton x:Name="TypingTab" GroupName="Page" Style="{StaticResource Nav}" Checked="PageChanged"/></UniformGrid></Border>
+    <Grid Grid.Row="1" Margin="0,16,0,0">
+      <Grid x:Name="GeneralPage"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Background="#232326" BorderBrush="#303034" BorderThickness="1" CornerRadius="10" Padding="16,5"><Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="178"/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="43"/><RowDefinition Height="43"/><RowDefinition Height="43"/><RowDefinition Height="43"/><RowDefinition Height="43"/><RowDefinition Height="43"/></Grid.RowDefinitions>
+          <TextBlock x:Name="LanguageLabel"/><ComboBox x:Name="LanguagePicker" Grid.Column="1" Width="158" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+          <TextBlock x:Name="LaunchLabel" Grid.Row="1"/><CheckBox x:Name="Launch" Grid.Row="1" Grid.Column="1" Style="{StaticResource Switch}"/>
+          <TextBlock x:Name="EnabledLabel" Grid.Row="2"/><CheckBox x:Name="Enabled" Grid.Row="2" Grid.Column="1" Style="{StaticResource Switch}"/>
+          <TextBlock x:Name="SpellingLabel" Grid.Row="3"/><CheckBox x:Name="Spelling" Grid.Row="3" Grid.Column="1" Style="{StaticResource Switch}"/>
+          <TextBlock x:Name="ShortsLabel" Grid.Row="4"/><CheckBox x:Name="Shorts" Grid.Row="4" Grid.Column="1" Style="{StaticResource Switch}"/>
+          <TextBlock x:Name="DictionaryLabel" Grid.Row="5"/><CheckBox x:Name="Dictionary" Grid.Row="5" Grid.Column="1" Style="{StaticResource Switch}"/>
+        </Grid></Border>
+        <TextBlock x:Name="DictionaryStatus" Grid.Row="1" Style="{StaticResource Hint}" Margin="2,12,0,0"/>
+      </Grid>
+      <Grid x:Name="TypingPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border Background="#232326" BorderBrush="#303034" BorderThickness="1" CornerRadius="10" Padding="16,5"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="178"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="43"/><RowDefinition Height="43"/></Grid.RowDefinitions>
+          <TextBlock x:Name="ConvertLabel"/><Button x:Name="ConvertButton" Grid.Column="1" VerticalAlignment="Center" Click="RecordConvert"/>
+          <TextBlock x:Name="ExcludeLabel" Grid.Row="1"/><Button x:Name="ExcludeButton" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Click="RecordExclude"/>
+        </Grid></Border>
+        <TextBlock x:Name="ShortcutHint" Grid.Row="1" Style="{StaticResource Hint}" Margin="2,8,0,12"/>
+        <Grid Grid.Row="2" Margin="2,0,2,8"><TextBlock x:Name="ExceptionsLabel"/><TextBlock x:Name="ExceptionsHint" Style="{StaticResource Hint}" HorizontalAlignment="Right"/></Grid>
+        <Border Grid.Row="3" Background="#232326" BorderBrush="#303034" BorderThickness="1" CornerRadius="10" Padding="10"><Grid><Grid.RowDefinitions><RowDefinition Height="34"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Grid Margin="0,0,8,0"><TextBox x:Name="WordInput" MaxLength="256" KeyDown="WordKeyDown" TextChanged="WordChanged"/><TextBlock x:Name="WordPlaceholder" Margin="11,0" Foreground="#ACACB3" IsHitTestVisible="False"/></Grid><Button x:Name="AddButton" Grid.Column="1" Click="AddWord"/></Grid>
+          <Grid Grid.Row="1" Margin="0,9,0,0"><ScrollViewer x:Name="ExceptionsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsControl x:Name="Words"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Border Background="#333337" CornerRadius="5" Margin="0,0,6,6" Padding="9,0,1,0"><DockPanel><Button DockPanel.Dock="Right" Style="{StaticResource Quiet}" Content="×" FontSize="17" MinHeight="28" Padding="7,0" Click="RemoveWord" AutomationProperties.Name="{Binding RemoveLabel}"/><TextBlock Text="{Binding Word}" MaxWidth="440" TextTrimming="CharacterEllipsis" ToolTip="{Binding Word}"/></DockPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer><TextBlock x:Name="EmptyWords" Style="{StaticResource Hint}" VerticalAlignment="Top" IsHitTestVisible="False" Margin="2,1"/></Grid>
+        </Grid></Border>
+        <TextBlock x:Name="WordHint" Grid.Row="4" Style="{StaticResource Hint}" MinHeight="26" Margin="2,0" AutomationProperties.LiveSetting="Polite"/>
+      </Grid>
+    </Grid>
+    <Grid Grid.Row="2"><StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="-8,0,0,0"><Button x:Name="GuideButton" Style="{StaticResource Quiet}" Click="Guide"/><Button x:Name="AboutButton" Style="{StaticResource Quiet}" Click="About" Margin="8,0,0,0"/></StackPanel><TextBlock x:Name="PrivacyHint" Style="{StaticResource Hint}" HorizontalAlignment="Right"/></Grid>
+    <Border Grid.Row="3" BorderBrush="#303034" BorderThickness="0,1,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Button x:Name="AuthorButton" Style="{StaticResource Quiet}" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-8,0,0,0" Click="Author" AutomationProperties.Name="Raven Systems"><TextBlock Text="Raven Systems" TextDecorations="Underline"/></Button><Button x:Name="FeedbackButton" Grid.Column="1" Style="{StaticResource Quiet}" VerticalAlignment="Center" Click="Feedback"/><Button x:Name="SaveButton" Grid.Column="2" Style="{StaticResource Primary}" MinWidth="108" Margin="12,0,0,0" VerticalAlignment="Center" Click="Save"/></Grid></Border>
+  </Grid>
+</UserControl>

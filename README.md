@@ -1,4 +1,4 @@
-> **Windows development branch.** Windows 0.1.0-alpha.7 with a single EXE installer is in [Windows/](Windows/README.md). The macOS version and DMG remain on [main](https://github.com/RavenSystemsDev/KiYo/tree/main).
+> **Windows development branch.** Windows 0.1.0-alpha.8 with a single EXE installer is in [Windows/](Windows/README.md). The macOS version and DMG remain on [main](https://github.com/RavenSystemsDev/KiYo/tree/main).
 
 <p align="center">
   <img src="Resources/AppIcon.png" width="128" alt="KiYo">

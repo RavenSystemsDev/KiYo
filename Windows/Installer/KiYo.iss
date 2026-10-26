@@ -1,6 +1,6 @@
 ; Build with the pinned Inno Setup compiler via ../build-installer.ps1.
 #ifndef AppVersion
-  #define AppVersion "0.1.0-alpha.7"
+  #define AppVersion "0.1.0-alpha.8"
 #endif
 #define AppId "{E9DA26F5-7C42-4B65-9E38-6A75434CFC81}"
 
@@ -13,7 +13,7 @@ AppPublisher=Raven Systems
 AppPublisherURL=https://ravensystems.io/
 AppSupportURL=https://github.com/RavenSystemsDev/KiYo/issues
 AppUpdatesURL=https://github.com/RavenSystemsDev/KiYo
-VersionInfoVersion=0.1.0.7
+VersionInfoVersion=0.1.0.8
 VersionInfoDescription=KiYo Setup
 DefaultDirName={localappdata}\Programs\Raven Systems\KiYo
 PrivilegesRequired=lowest

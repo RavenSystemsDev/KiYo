@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.7
+# KiYo for Windows — 0.1.0-alpha.8
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.
@@ -35,8 +35,13 @@ this installation's startup entry. Preferences remain in
 ## Settings
 
 Settings uses two compact tabs: **General** and **Shortcuts and exceptions**.
-The Save and feedback buttons remain visible below the tabs. Only the exceptions
-list scrolls when it contains many words; the settings window itself does not.
+Dark controls and aligned switches stay consistent in either Windows color mode.
+Add exceptions as individual words and remove them with the × button; changes
+are applied only on Save. Only a long exceptions list scrolls, not the window.
+**User guide** and **About KiYo** are separate buttons below either tab and are
+also available from the tray menu. The guide shows the saved keyboard shortcuts;
+About includes the version, Raven Systems, privacy and component/license notices.
+The Save and feedback buttons remain visible at the bottom.
 
 ## Spelling correction
 

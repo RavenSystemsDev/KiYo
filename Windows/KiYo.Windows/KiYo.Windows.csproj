@@ -9,7 +9,7 @@
     <ApplicationIcon>Assets/KiYo.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>KiYo</AssemblyName>
-    <Version>0.1.0-alpha.7</Version>
+    <Version>0.1.0-alpha.8</Version>
     <Company>Raven Systems</Company>
     <Product>KiYo for Windows</Product>
     <Copyright>Copyright © 2026 Raven Systems</Copyright>

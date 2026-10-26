@@ -118,6 +118,7 @@ internal sealed class TrayApp : ApplicationContext
         pause.Enabled = input?.Available ?? false;
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(T("Ошибка или идея?", "Bug or idea?"), null, (_, _) => Feedback());
+        menu.Items.Add(T("Инструкция", "User guide"), null, (_, _) => Guide());
         menu.Items.Add(T("О KiYo", "About KiYo"), null, (_, _) => About());
         menu.Items.Add(T("Завершить", "Quit"), null, (_, _) => ExitThread());
         tray.ContextMenuStrip = menu; old?.Dispose();
@@ -140,9 +141,16 @@ internal sealed class TrayApp : ApplicationContext
         if (code == "inputFailed") Save(preferences with { Enabled = false });
         tray.ShowBalloonTip(3500, "KiYo", text, ToolTipIcon.Info);
     }
-    internal void About() => MessageBox.Show(T(
-        "KiYo для Windows · 0.1.0-alpha.7\n\nАвтосмена русской и английской раскладки.\nТекст обрабатывается локально.\n\nRaven Systems — https://ravensystems.io/\n\nЛицензия и конфиденциальность находятся рядом с KiYo.exe.",
-        "KiYo for Windows · 0.1.0-alpha.7\n\nAutomatic Russian/English layout correction.\nText is processed locally.\n\nRaven Systems — https://ravensystems.io/\n\nLicense and privacy information are included beside KiYo.exe."), "KiYo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    internal void About(IWin32Window? owner = null)
+    {
+        using var dialog = new InformationForm(this, icon, preferences, false);
+        dialog.ShowDialog(owner);
+    }
+    internal void Guide(IWin32Window? owner = null)
+    {
+        using var dialog = new InformationForm(this, icon, preferences, true);
+        dialog.ShowDialog(owner);
+    }
     internal void Feedback()
     {
         var choice = MessageBox.Show(T("Сообщить об ошибке?\nДа — ошибка, Нет — предложение.", "Report a bug?\nYes — bug report, No — feature request."), "KiYo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
