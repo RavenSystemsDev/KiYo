@@ -80,7 +80,14 @@ internal sealed class SettingsForm : Form
         var feedback = new Button { Text = app.T("Ошибка или идея?", "Bug or idea?"), AutoSize = true };
         feedback.Click += (_, _) => app.Feedback();
         footer.Controls.Add(apply); footer.Controls.Add(feedback); Full(footer, 48);
-        var author = new LinkLabel { Text = "Raven Systems · ravensystems.io", TextAlign = ContentAlignment.MiddleCenter };
+        var author = new LinkLabel
+        {
+            Text = "Raven Systems · ravensystems.io", TextAlign = ContentAlignment.MiddleCenter,
+            LinkColor = Color.White, ActiveLinkColor = Color.White, VisitedLinkColor = Color.White,
+            LinkBehavior = LinkBehavior.AlwaysUnderline,
+            // Keep the white link legible in both Windows color modes.
+            BackColor = Color.FromArgb(25, 27, 29)
+        };
         author.LinkClicked += (_, _) => TrayApp.Open("https://ravensystems.io/"); Full(author, 30);
         AcceptButton = apply;
     }

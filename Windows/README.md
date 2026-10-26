@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.5
+# KiYo for Windows — 0.1.0-alpha.6
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.

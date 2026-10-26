@@ -1,6 +1,6 @@
 ; Build with the pinned Inno Setup compiler via ../build-installer.ps1.
 #ifndef AppVersion
-  #define AppVersion "0.1.0-alpha.5"
+  #define AppVersion "0.1.0-alpha.6"
 #endif
 #define AppId "{E9DA26F5-7C42-4B65-9E38-6A75434CFC81}"
 
@@ -13,7 +13,7 @@ AppPublisher=Raven Systems
 AppPublisherURL=https://ravensystems.io/
 AppSupportURL=https://github.com/RavenSystemsDev/KiYo/issues
 AppUpdatesURL=https://github.com/RavenSystemsDev/KiYo
-VersionInfoVersion=0.1.0.5
+VersionInfoVersion=0.1.0.6
 VersionInfoDescription=KiYo Setup
 DefaultDirName={localappdata}\Programs\Raven Systems\KiYo
 PrivilegesRequired=lowest
@@ -330,7 +330,8 @@ begin
   CloseButton.Caption := T('Закрыть установщик', 'Close installer');
   CloseButton.OnClick := @CloseWithoutLaunch;
   Footer := Text(Surface, 'Raven Systems', 580, 18, 8);
-  Footer.Font.Color := Secondary;
+  Footer.Font.Color := clWhite;
+  Footer.Font.Style := [fsUnderline];
   Footer.Cursor := crHandPoint;
   Footer.OnClick := @OpenBrand;
   PlaceButton(WizardForm.NextButton, 452, 48);

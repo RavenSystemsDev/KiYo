@@ -63,7 +63,7 @@ try
     using (var key = Registry.CurrentUser.OpenSubKey(uninstallKey))
     {
         Check(key?.GetValue("DisplayName") is string name && name.Contains("KiYo"), "Registered in Windows Apps");
-        Check(key?.GetValue("DisplayVersion") as string == "0.1.0-alpha.5", "Installed version is alpha.5");
+        Check(key?.GetValue("DisplayVersion") as string == "0.1.0-alpha.6", "Installed version is alpha.6");
     }
     Check(State(window, "Запускать при входе в Windows") == ToggleState.Off, "Autostart defaults off");
     Toggle(window, "Запускать при входе в Windows");
