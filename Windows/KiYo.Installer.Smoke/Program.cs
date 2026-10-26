@@ -181,14 +181,19 @@ static void WaitExit(Process process, int expected)
 }
 static AutomationElement? Dialog(string title)
 {
-    foreach (AutomationElement window in AutomationElement.RootElement.FindAll(TreeScope.Children,
-        new PropertyCondition(AutomationElement.NameProperty, title)))
+    foreach (AutomationElement window in AutomationElement.RootElement.FindAll(TreeScope.Children, Condition.TrueCondition))
     {
         try
         {
             var process = Process.GetProcessById(window.Current.ProcessId);
-            var path = process.MainModule?.FileName;
-            if (IsInstallerPath(path)) return window;
+            if (!IsInstallerPath(process.MainModule?.FileName)) continue;
+            if (window.Current.Name == title) return window;
+            // VCL owned modal windows are UIA descendants of the installer,
+            // not necessarily immediate desktop children.
+            var owned = window.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.NameProperty, title),
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Window)));
+            if (owned is not null) return owned;
         }
         catch (ArgumentException) { }
     }
