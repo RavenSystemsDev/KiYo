@@ -67,7 +67,7 @@ const
   Secondary = $B8B1AC;
 var
   Surface: TPanel;
-  Logo, TrayLogo, ProgressTrack: TBitmapImage;
+  Logo, TrayLogo, ProgressTrack, CompleteBadge: TBitmapImage;
   Heading, Subtitle, Features, Percentage, TrayHint: TNewStaticText;
   OptionsButton, LicenseButton, CloseButton: TNewButton;
   StartupCheck: TNewCheckBox;
@@ -236,6 +236,24 @@ begin
   Logo.PngImage.LoadFromFile(ExpandConstant('{tmp}\AppIcon.png'));
   Logo.Stretch := True;
   Logo.BackColor := Background;
+  CompleteBadge := TBitmapImage.Create(WizardForm);
+  CompleteBadge.Parent := Surface;
+  CompleteBadge.SetBounds(ScaleX(282), ScaleY(148), ScaleX(44), ScaleY(44));
+  CompleteBadge.Bitmap.Width := CompleteBadge.Width;
+  CompleteBadge.Bitmap.Height := CompleteBadge.Height;
+  with CompleteBadge.Bitmap.Canvas do begin
+    Brush.Color := Background;
+    Pen.Color := Background;
+    Rectangle(0, 0, CompleteBadge.Width, CompleteBadge.Height);
+    Brush.Color := $7FC126;
+    Pen.Color := $7FC126;
+    Ellipse(1, 1, CompleteBadge.Width - 1, CompleteBadge.Height - 1);
+    Pen.Color := clWhite;
+    Pen.Width := ScaleX(3);
+    MoveTo(ScaleX(12), ScaleY(22));
+    LineTo(ScaleX(19), ScaleY(29));
+    LineTo(ScaleX(32), ScaleY(15));
+  end;
   Heading := Text(Surface, '', 200, 40, 20);
   Heading.Font.Style := [fsBold];
   Subtitle := Text(Surface, '', 248, 60, 11);
@@ -336,6 +354,7 @@ begin
   WizardForm.BackButton.Visible := False;
   WizardForm.NextButton.Visible := not IsInstalling;
   WizardForm.CancelButton.Visible := IsInstalling;
+  CompleteBadge.Visible := IsFinished;
   Features.Visible := IsWelcome;
   OptionsButton.Visible := IsWelcome;
   LicenseButton.Visible := IsWelcome;

@@ -212,8 +212,10 @@ static AutomationElement? Find(AutomationElement window, string name) => window.
     new AndCondition(new PropertyCondition(AutomationElement.NameProperty, name), new PropertyCondition(AutomationElement.IsOffscreenProperty, false)));
 static void Click(AutomationElement window, string name)
 {
-    var button = Find(window, name) ?? throw new Exception("Button not found: " + name);
-    ((InvokePattern)button.GetCurrentPattern(InvokePattern.Pattern)).Invoke();
+    AutomationElement? button = null;
+    // Invocations are asynchronous; a preceding modal may still be closing.
+    Wait(() => (button = Find(window, name)) is not null && button.Current.IsEnabled, 10_000);
+    ((InvokePattern)button!.GetCurrentPattern(InvokePattern.Pattern)).Invoke();
 }
 static ToggleState State(AutomationElement window, string name) =>
     ((TogglePattern)(Find(window, name) ?? throw new Exception("Checkbox not found: " + name)).GetCurrentPattern(TogglePattern.Pattern)).Current.ToggleState;
@@ -225,6 +227,9 @@ void Capture(AutomationElement window, string name)
     Native.SetForegroundWindow((nint)window.Current.NativeWindowHandle);
     Thread.Sleep(150);
     var bounds = window.Current.BoundingRectangle;
+    // Exclude Windows' invisible resize border, which otherwise captures desktop pixels.
+    if (Native.DwmGetWindowAttribute((nint)window.Current.NativeWindowHandle, 9, out var frame, Marshal.SizeOf<Native.Rect>()) == 0)
+        bounds = new System.Windows.Rect(frame.Left, frame.Top, frame.Right - frame.Left, frame.Bottom - frame.Top);
     using var image = new Bitmap((int)bounds.Width, (int)bounds.Height);
     using var graphics = Graphics.FromImage(image);
     graphics.CopyFromScreen((int)bounds.X, (int)bounds.Y, 0, 0, image.Size);
@@ -232,6 +237,10 @@ void Capture(AutomationElement window, string name)
 }
 static class Native
 {
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct Rect { internal int Left, Top, Right, Bottom; }
+    [DllImport("dwmapi.dll")]
+    internal static extern int DwmGetWindowAttribute(nint window, int attribute, out Rect value, int size);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     internal static extern uint GetLongPathName(string shortPath, StringBuilder longPath, int capacity);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
