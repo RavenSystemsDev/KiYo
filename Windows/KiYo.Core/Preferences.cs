@@ -12,6 +12,7 @@ public sealed record Preferences
     public bool Enabled { get; init; } = true;
     public bool ShortWords { get; init; } = true;
     public bool UseSystemDictionary { get; init; } = true;
+    public bool SpellingEnabled { get; init; } // Opt-in; existing settings keep their behavior.
     public bool WelcomeShown { get; init; }
     public string Language { get; init; } = "system";
     public string[] Exclusions { get; init; } = [];

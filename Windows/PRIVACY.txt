@@ -21,7 +21,9 @@ Exceptions and settings persist in the current user's LocalAppData folder:
 RavenSystems/KiYo/settings.json. Do not store passwords in exceptions.
 
 The Windows spelling service is used locally to check whether candidate words
-exist in installed en-US/ru-RU dictionaries. KiYo does not alter Windows' personal
+exist in installed en-US/ru-RU dictionaries and, when optional spelling correction
+is enabled, to request and validate spelling suggestions. KiYo does not alter
+Windows' personal
 dictionary. Availability depends on installed language features.
 
 Optional launch at login adds only the current user's KiYo value under

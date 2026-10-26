@@ -11,6 +11,7 @@ internal static class Fixture
     private static string Body(string mode) => mode switch
     {
         "burst" => "ghbdtn hi rfr ltkf ", "partial" => "ghbdtn r",
+        "spelling" => "helllo worlld ghbdtn ",
         "music-tail" => "usic ", "joined-ru" => "руддщ ", _ => "ghbdtn "
     };
     private static string Prefix(string mode) => mode switch
@@ -54,7 +55,7 @@ internal static class Fixture
     }
     internal static void Verify()
     {
-        foreach (var mode in new[] { "editable", "selected", "password", "readonly", "email", "burst", "partial", "prefixed", "joined", "joined-ru", "music-tail", "changed", "caret" })
+        foreach (var mode in new[] { "editable", "selected", "password", "readonly", "email", "burst", "spelling", "partial", "prefixed", "joined", "joined-ru", "music-tail", "changed", "caret" })
         {
             var file = Path.Combine(Path.GetTempPath(), "kiyo-uia-" + Guid.NewGuid());
             using var child = Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { ArgumentList = { "--fixture", mode, file }, UseShellExecute = false })!;
@@ -109,7 +110,10 @@ internal static class Fixture
                 }
                 var pending = new TypingState(); pending.Context(window, 0x409);
                 foreach (var c in Body(mode)) if (c == ' ') pending.Space(DateTimeOffset.UtcNow); else pending.Character(c);
-                var plan = PhraseCorrection.Analyze(pending.Snapshot()!, (raw, candidate) => Layouts.CorrectBuffered(raw, candidate, true, []));
+                using var dictionary = new SystemDictionary();
+                var plan = PhraseCorrection.Analyze(pending.Snapshot()!, (raw, candidate) => Layouts.CorrectBuffered(raw, candidate, true, [], null,
+                    mode == "spelling" ? text => Spelling.Correct(text, [], dictionary.Valid, dictionary.Suggest) : null));
+                if (mode == "spelling" && plan.Replacement != "hello world привет ") throw new Exception("Spelling/layout phrase decision failed");
                 var expectedText = Prefix(mode) + plan.Replacement;
                 if (Native.GetForegroundWindow() != window) throw new Exception("Focus changed before test injection");
                 if (!Native.Replace(mode == "selected" ? 0 : Body(mode).Length, mode == "selected" ? "привет" : plan.Replacement)) throw new Exception("SendInput test failed");

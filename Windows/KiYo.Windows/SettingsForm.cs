@@ -34,11 +34,13 @@ internal sealed class SettingsForm : Form
         var launch = new CheckBox { Checked = Startup.Enabled, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
         Row(app.T("Запуск при входе", "Launch at login"), launch);
         var enabled = new CheckBox { Checked = prefs.Enabled, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
-        Row(app.T("Автосмена раскладки", "Auto correction"), enabled);
+        Row(app.T("Автоисправление", "Auto correction"), enabled);
+        var spelling = new CheckBox { Checked = prefs.SpellingEnabled, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
+        Row(app.T("Исправление орфографии", "Spelling correction"), spelling);
         var shorts = new CheckBox { Checked = prefs.ShortWords, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
         Row(app.T("Короткие слова", "Short words"), shorts);
         var dictionary = new CheckBox { Checked = prefs.UseSystemDictionary, Text = app.T("Использовать", "Use"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
-        Row(app.T("Словарь Windows", "Windows dictionary"), dictionary);
+        Row(app.T("Словарь для раскладки", "Layout dictionary"), dictionary);
         var convertButton = new Button { Text = convert.ToString() };
         convertButton.Click += (_, _) => { var chosen = Record(convert, exclude); if (chosen != null) { convert = chosen; convertButton.Text = chosen.ToString(); } };
         Row(app.T("Исправить выделение", "Convert selection"), convertButton);
@@ -48,7 +50,7 @@ internal sealed class SettingsForm : Form
         Full(new Label { Text = app.T("Исключения — по одному слову в строке. Не добавляйте пароли.", "Exceptions — one word per line. Do not enter passwords."), AutoSize = false }, 34);
         var words = new TextBox { Multiline = true, ScrollBars = ScrollBars.Vertical, Text = string.Join(Environment.NewLine, prefs.Exclusions), MaxLength = 128000 };
         Full(words, 120);
-        Full(new Label { Text = app.T("Словарь Windows помогает выбрать раскладку. Проверка опечаток и синхронизация пока доступны только на Mac. Если поле защищено или недоступно, KiYo пропускает его.", "The Windows dictionary helps choose the layout. Spelling correction and sync are currently Mac-only. Protected or unavailable fields are skipped."), AutoSize = false }, 66);
+        Full(new Label { Text = app.T("Орфография исправляется после пробела через словари Windows для русского и английского. Неоднозначные варианты и защищённые поля пропускаются. Нужен установленный словарь языка.", "Spelling is corrected after a space using Russian and English Windows dictionaries. Ambiguous suggestions and protected fields are skipped. The language dictionary must be installed."), AutoSize = false }, 84);
         var footer = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft };
         var apply = new Button { Text = app.T("Сохранить", "Save"), AutoSize = true };
         apply.Click += (_, _) =>
@@ -56,7 +58,7 @@ internal sealed class SettingsForm : Form
             try { Startup.Set(launch.Checked); }
             catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
             { MessageBox.Show(app.T("Не удалось изменить автозапуск.", "Could not change launch at login."), "KiYo"); return; }
-            save(prefs with { Enabled = enabled.Checked, ShortWords = shorts.Checked, UseSystemDictionary = dictionary.Checked,
+            save(prefs with { Enabled = enabled.Checked, ShortWords = shorts.Checked, UseSystemDictionary = dictionary.Checked, SpellingEnabled = spelling.Checked,
                 Language = language.SelectedIndex == 1 ? "ru" : language.SelectedIndex == 2 ? "en" : "system",
                 ConvertShortcut = convert, ExcludeShortcut = exclude, Exclusions = words.Lines });
             Close();

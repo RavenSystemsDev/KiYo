@@ -132,6 +132,15 @@ internal static class FastTypingTests
             Equal(scenario.Expected, editor.Text, $"physical phrase: keys {interval}ms/provider {latency}ms");
             Check(!editor.State.HasPending, "burst drained after provider catches up");
         }
+        foreach (int interval in new[] { 1, 5, 20, 80 })
+        foreach (int latency in new[] { 0, 40, 120, 240 })
+        {
+            var editor = new Editor(latency, false) { CorrectWord = SpellingTests.CorrectBuffered };
+            foreach (var c in "helllo worlld ghbdtn hi ") { editor.Key(c); editor.Advance(interval); }
+            editor.Advance(1500);
+            Equal("hello world привет hi ", editor.Text, $"spelling and layouts at {interval}ms/{latency}ms");
+            Check(!editor.State.HasPending, "spelling burst drained");
+        }
         var cold = new Editor(20, false) { FirstLatency = 600 };
         foreach (var c in scenarios[0].Keys) { cold.Key(c); cold.Advance(40); }
         cold.Advance(1500);
@@ -171,6 +180,7 @@ internal static class FastTypingTests
         internal int Latency { get; set; } = latency;
         internal int FirstLatency { get; set; }
         internal int ReadFailures { get; set; }
+        internal Func<string, string, string?>? CorrectWord { get; init; }
         private bool layoutRussian = russian;
         private PhraseAnalysis? job;
         internal void Key(char physical)
@@ -209,7 +219,7 @@ internal static class FastTypingTests
                 }
                 if (job == null && schedule.Ready(clock) && State.Snapshot() is { } next)
                 {
-                    job = PhraseCorrection.Analyze(next, (raw, candidate) => Layouts.CorrectBuffered(raw, candidate, true, []));
+                    job = PhraseCorrection.Analyze(next, CorrectWord ?? ((raw, candidate) => Layouts.CorrectBuffered(raw, candidate, true, [])));
                     started = clock; finish = clock + (FirstLatency > 0 ? FirstLatency : Latency); FirstLatency = 0;
                 }
             }

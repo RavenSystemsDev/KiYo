@@ -141,8 +141,8 @@ internal sealed class TrayApp : ApplicationContext
         tray.ShowBalloonTip(3500, "KiYo", text, ToolTipIcon.Info);
     }
     internal void About() => MessageBox.Show(T(
-        "KiYo для Windows · 0.1.0-alpha.4\n\nАвтосмена русской и английской раскладки.\nТекст обрабатывается локально.\n\nRaven Systems — https://ravensystems.io/\n\nЛицензия и конфиденциальность находятся рядом с KiYo.exe.",
-        "KiYo for Windows · 0.1.0-alpha.4\n\nAutomatic Russian/English layout correction.\nText is processed locally.\n\nRaven Systems — https://ravensystems.io/\n\nLicense and privacy information are included beside KiYo.exe."), "KiYo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        "KiYo для Windows · 0.1.0-alpha.5\n\nАвтосмена русской и английской раскладки.\nТекст обрабатывается локально.\n\nRaven Systems — https://ravensystems.io/\n\nЛицензия и конфиденциальность находятся рядом с KiYo.exe.",
+        "KiYo for Windows · 0.1.0-alpha.5\n\nAutomatic Russian/English layout correction.\nText is processed locally.\n\nRaven Systems — https://ravensystems.io/\n\nLicense and privacy information are included beside KiYo.exe."), "KiYo", MessageBoxButtons.OK, MessageBoxIcon.Information);
     internal void Feedback()
     {
         var choice = MessageBox.Show(T("Сообщить об ошибке?\nДа — ошибка, Нет — предложение.", "Report a bug?\nYes — bug report, No — feature request."), "KiYo", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);

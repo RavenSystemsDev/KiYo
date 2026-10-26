@@ -96,5 +96,6 @@ for (int i = 0; i < 10000; i++)
   typing.Corrected(word, output.Length, now);
  }
 }
+assertions += SpellingTests.Run();
 assertions += FastTypingTests.Run();
 Console.WriteLine($"PASS: {assertions} assertions; 10,000 alternating phrases in {timer.ElapsedMilliseconds} ms. No system input was generated.");

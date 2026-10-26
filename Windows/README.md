@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.4
+# KiYo for Windows — 0.1.0-alpha.5
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.
@@ -6,7 +6,7 @@ This is an initial Windows implementation, not a stable Windows release.
 Implemented: tray menu, Russian/English settings, optional per-user startup,
 automatic RU/EN conversion after space, case preservation and KiYo spelling,
 exceptions, configurable shortcuts for selected-text conversion and exclusions,
-read-only use of installed Windows spelling dictionaries, single-instance startup,
+optional spelling correction using installed Windows dictionaries, single-instance startup,
 and feedback by user-sent email. Processing is local; no clipboard fallback,
 telemetry, text logs, administrator prompt or network-based language service.
 
@@ -31,6 +31,23 @@ Uninstall from Windows Settings → Apps → Installed apps → KiYo.
 Updates and uninstall preserve settings and exceptions; uninstall removes only
 this installation's startup entry. Preferences remain in
 `%LOCALAPPDATA%\RavenSystems\KiYo\settings.json`.
+
+## Spelling correction
+
+Enable **Spelling correction** in Settings and save. This setting is off by
+default, including when loading older preferences. With Auto correction enabled,
+completed words are checked after a space. Layout correction takes priority;
+spelling uses the installed Windows en-US/ru-RU dictionaries independently of the
+Layout dictionary switch. No dictionary download or online service is used.
+
+Only a unique closest, dictionary-validated suggestion in the same alphabet is
+accepted. Short/uppercase/mixed-case words, known technical terms, exclusions,
+addresses and identifiers are left alone. Ambiguous suggestions, unavailable
+language dictionaries, and protected or unsupported fields are skipped. This
+corrects individual typos; it does not rewrite grammar or split joined words.
+Backspace/retyping a rejected correction keeps the existing one-retry behavior.
+If a language dictionary is missing, install that language's **Basic typing**
+feature in Windows Settings → Time & language → Language & region.
 
 ## Build and test
 
@@ -109,8 +126,7 @@ one Chromium/Electron editor:
 - Move caret/click/change app during validation: no stale replacement.
 - Shortcut conflicts, first run in RU/EN, pause, duplicate launch, real logout/login.
 
-No Authenticode signing, automatic updater, sync or spelling-error correction is
-included in this alpha. Standard US English and Russian layouts only; IMEs and
+No Authenticode signing, automatic updater or sync is included in this alpha. Standard US English and Russian layouts only; IMEs and
 other layouts are skipped. Native compatibility requires actual Windows testing.
 
 Raven Systems — https://ravensystems.io/

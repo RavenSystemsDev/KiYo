@@ -87,7 +87,10 @@ internal sealed class InputService : IDisposable
                 {
                     var analysis = PhraseCorrection.Analyze(attempt, (original, candidate) =>
                         Layouts.CorrectBuffered(original, candidate, options.ShortWords, options.Exclusions,
-                            options.UseSystemDictionary ? (text, ru) => (dictionary ??= new()).Valid(text, ru) : null));
+                            options.UseSystemDictionary ? (text, ru) => (dictionary ??= new()).Valid(text, ru) : null,
+                            options.SpellingEnabled ? text => Spelling.Correct(text, options.Exclusions,
+                                (word, ru) => (dictionary ??= new()).Valid(word, ru),
+                                (word, ru) => (dictionary ??= new()).Suggest(word, ru)) : null));
                     if (!analysis.Changed) return (analysis, (TextSnapshot?)null);
                     var snapshot = TextAccess.Read(attempt.Window, attempt.Text);
                     return (analysis, snapshot != null && TextAccess.StillSelected(snapshot) ? snapshot : null);

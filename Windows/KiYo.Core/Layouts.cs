@@ -16,6 +16,7 @@ public static class Layouts
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
+    internal static bool KnownWord(string word) => (IsRussian(word) ? Ru : En).Contains(word);
     public static bool IsRussian(string text) => text.Any(c => c is >= 'А' and <= 'я' or 'Ё' or 'ё');
     public static bool IsLetter(char c) => c is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= 'А' and <= 'я' or 'Ё' or 'ё';
     public static string Convert(string text)
@@ -55,10 +56,10 @@ public static class Layouts
         return null;
     }
     public static string? CorrectBuffered(string original, string candidate, bool shortWords,
-        IEnumerable<string> exclusions, Func<string, bool, bool?>? valid = null)
+        IEnumerable<string> exclusions, Func<string, bool, bool?>? valid = null, Func<string, string?>? spelling = null)
     {
         if (Protected(original, exclusions) || Protected(candidate, exclusions)) return null;
-        var corrected = Correct(candidate, shortWords, exclusions, valid);
+        var corrected = Correct(candidate, shortWords, exclusions, valid) ?? spelling?.Invoke(candidate);
         // Candidate differs only when our own asynchronous layout request landed
         // after a prefix was already typed. Preserve the same physical keys.
         var result = corrected ?? (candidate != original ? candidate : null);
