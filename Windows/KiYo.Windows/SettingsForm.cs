@@ -8,41 +8,65 @@ internal sealed class SettingsForm : Form
     {
         this.app = app; convert = prefs.ConvertShortcut; exclude = prefs.ExcludeShortcut;
         Text = app.T("Настройки KiYo", "KiYo settings"); Icon = icon;
-        Font = new Font("Segoe UI", 10); AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new Size(540, 700); MinimumSize = new Size(540, 600);
+        Font = new Font("Segoe UI", 10);
+        AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
+        ClientSize = new Size(580, 440);
         StartPosition = FormStartPosition.CenterScreen;
-        var body = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(22), ColumnCount = 2, AutoScroll = true };
-        body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 53)); body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 47));
+        var body = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill, Padding = new Padding(12), ColumnCount = 1, RowCount = 3
+        };
+        body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        body.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        body.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        body.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
         Controls.Add(body);
-        int row = 0;
-        void Full(Control control, int height)
+        var tabs = new TabControl { Dock = DockStyle.Fill, Margin = Padding.Empty };
+        body.Controls.Add(tabs, 0, 0);
+        TableLayoutPanel Page(string title)
         {
-            control.Dock = DockStyle.Fill; control.Margin = new Padding(0, 0, 0, 12);
-            body.RowStyles.Add(new RowStyle(SizeType.Absolute, height)); body.Controls.Add(control, 0, row++); body.SetColumnSpan(control, 2);
+            var page = new TabPage(title) { Padding = new Padding(10), UseVisualStyleBackColor = true };
+            var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 53));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 47));
+            page.Controls.Add(table); tabs.TabPages.Add(page);
+            return table;
         }
-        void Row(string label, Control control, int height = 44)
+        void Full(TableLayoutPanel table, Control control, int height, bool flexible = false)
         {
-            var caption = new Label { Text = label, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true };
-            control.Dock = DockStyle.Fill; control.Margin = new Padding(0, 5, 0, 5);
-            body.RowStyles.Add(new RowStyle(SizeType.Absolute, height)); body.Controls.Add(caption, 0, row); body.Controls.Add(control, 1, row++);
+            control.Dock = DockStyle.Fill; control.Margin = new Padding(0, 0, 0, 4);
+            int row = table.RowStyles.Count;
+            table.RowStyles.Add(new RowStyle(flexible ? SizeType.Percent : SizeType.Absolute, flexible ? 100 : height));
+            table.RowCount = row + 1;
+            table.Controls.Add(control, 0, row); table.SetColumnSpan(control, 2);
         }
-        Full(new Label { Text = app.T("KiYo живёт возле часов. Исправляет раскладку после пробела в поддерживаемых редакторах. Текст остаётся на компьютере.", "Find KiYo beside the clock. It corrects the layout after a space in supported editors. Text stays on your computer."), AutoSize = false }, 70);
+        void Row(TableLayoutPanel table, string label, Control control, int height = 32)
+        {
+            var caption = new Label { Text = label, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 8, 0), TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true };
+            control.Dock = DockStyle.Fill; control.Margin = new Padding(0, 2, 0, 2);
+            int row = table.RowStyles.Count;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, height)); table.RowCount = row + 1;
+            table.Controls.Add(caption, 0, row); table.Controls.Add(control, 1, row);
+        }
+        var general = Page(app.T("Основные", "General"));
+        var typing = Page(app.T("Сочетания и исключения", "Shortcuts and exceptions"));
+        Full(general, new Label { Text = app.T("Исправления после пробела. Текст остаётся на компьютере.", "Corrections after a space. Text stays on your computer.") }, 26);
         var language = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         language.Items.AddRange(new object[] { app.T("Как в системе", "System language"), "Русский", "English" });
         language.SelectedIndex = prefs.Language == "ru" ? 1 : prefs.Language == "en" ? 2 : 0;
-        Row(app.T("Язык приложения", "App language"), language);
+        Row(general, app.T("Язык приложения", "App language"), language);
         var launch = new CheckBox { Checked = Startup.Enabled, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
-        Row(app.T("Запуск при входе", "Launch at login"), launch);
+        Row(general, app.T("Запуск при входе", "Launch at login"), launch);
         var enabled = new CheckBox { Checked = prefs.Enabled, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
-        Row(app.T("Автоисправление", "Auto correction"), enabled);
+        Row(general, app.T("Автоисправление", "Auto correction"), enabled);
         var spelling = new CheckBox { Checked = prefs.SpellingEnabled, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
-        Row(app.T("Исправление орфографии", "Spelling correction"), spelling);
+        Row(general, app.T("Исправление орфографии", "Spelling correction"), spelling);
         var shorts = new CheckBox { Checked = prefs.ShortWords, Text = app.T("Включить", "Enable"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
-        Row(app.T("Короткие слова", "Short words"), shorts);
+        Row(general, app.T("Короткие слова", "Short words"), shorts);
         var dictionary = new CheckBox { Checked = prefs.UseSystemDictionary, Text = app.T("Использовать", "Use"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
-        Row(app.T("Словарь для раскладки", "Layout dictionary"), dictionary);
+        Row(general, app.T("Словарь для раскладки", "Layout dictionary"), dictionary);
         var dictionaryStatus = new Label { Text = app.T("Словари Windows: проверяем…", "Windows dictionaries: checking…"), AutoSize = false };
-        Full(dictionaryStatus, 34);
+        Full(general, dictionaryStatus, 24);
         Shown += async (_, _) =>
         {
             var available = await Task.Run(() =>
@@ -55,18 +79,20 @@ internal sealed class SettingsForm : Form
             dictionaryStatus.Text = app.T("Словари Windows: ", "Windows dictionaries: ") +
                 $"RU — {Status(available.Russian)}, EN — {Status(available.English)}";
         };
+        Full(general, new Label { Text = app.T("Орфография использует словари Windows. Неоднозначные варианты и защищённые поля пропускаются.", "Spelling uses Windows dictionaries. Ambiguous suggestions and protected fields are skipped.") }, 44);
+        general.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); general.RowCount++;
         var convertButton = new Button { Text = convert.ToString() };
         convertButton.Click += (_, _) => { var chosen = Record(convert, exclude); if (chosen != null) { convert = chosen; convertButton.Text = chosen.ToString(); } };
-        Row(app.T("Исправить выделение", "Convert selection"), convertButton);
+        Row(typing, app.T("Исправить выделение", "Convert selection"), convertButton, 38);
         var excludeButton = new Button { Text = exclude.ToString() };
         excludeButton.Click += (_, _) => { var chosen = Record(exclude, convert); if (chosen != null) { exclude = chosen; excludeButton.Text = chosen.ToString(); } };
-        Row(app.T("Добавить в исключения", "Exclude selection"), excludeButton);
-        Full(new Label { Text = app.T("Исключения — по одному слову в строке. Не добавляйте пароли.", "Exceptions — one word per line. Do not enter passwords."), AutoSize = false }, 34);
-        var words = new TextBox { Multiline = true, ScrollBars = ScrollBars.Vertical, Text = string.Join(Environment.NewLine, prefs.Exclusions), MaxLength = 128000 };
-        Full(words, 120);
-        Full(new Label { Text = app.T("Орфография исправляется после пробела через словари Windows для русского и английского. Неоднозначные варианты и защищённые поля пропускаются. Нужен установленный словарь языка.", "Spelling is corrected after a space using Russian and English Windows dictionaries. Ambiguous suggestions and protected fields are skipped. The language dictionary must be installed."), AutoSize = false }, 84);
-        var footer = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft };
-        var apply = new Button { Text = app.T("Сохранить", "Save"), AutoSize = true };
+        Row(typing, app.T("Добавить в исключения", "Exclude selection"), excludeButton, 38);
+        Full(typing, new Label { Text = app.T("Нажмите кнопку справа, чтобы задать сочетание. Оно работает с выделенным текстом.", "Click a button on the right to record a shortcut. Use it with selected text.") }, 44);
+        Full(typing, new Label { Text = app.T("Исключения — по одному слову в строке. Не добавляйте пароли.", "Exceptions — one word per line. Do not enter passwords."), AutoSize = false }, 28);
+        var words = new TextBox { Multiline = true, AcceptsReturn = true, ScrollBars = ScrollBars.Vertical, Text = string.Join(Environment.NewLine, prefs.Exclusions), MaxLength = 128000 };
+        Full(typing, words, 0, flexible: true);
+        var footer = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Margin = new Padding(0, 6, 0, 0) };
+        var apply = new Button { Text = app.T("Сохранить", "Save"), Size = new Size(110, 28), Margin = Padding.Empty };
         apply.Click += (_, _) =>
         {
             try { Startup.Set(launch.Checked); }
@@ -77,19 +103,21 @@ internal sealed class SettingsForm : Form
                 ConvertShortcut = convert, ExcludeShortcut = exclude, Exclusions = words.Lines });
             Close();
         };
-        var feedback = new Button { Text = app.T("Ошибка или идея?", "Bug or idea?"), AutoSize = true };
+        var feedback = new Button { Text = app.T("Ошибка или идея?", "Bug or idea?"), Size = new Size(165, 28), Margin = new Padding(0, 0, 8, 0) };
         feedback.Click += (_, _) => app.Feedback();
-        footer.Controls.Add(apply); footer.Controls.Add(feedback); Full(footer, 48);
+        footer.Controls.Add(apply); footer.Controls.Add(feedback); body.Controls.Add(footer, 0, 1);
         var author = new LinkLabel
         {
+            Dock = DockStyle.Fill, Margin = Padding.Empty,
             Text = "Raven Systems · ravensystems.io", TextAlign = ContentAlignment.MiddleCenter,
             LinkColor = Color.White, ActiveLinkColor = Color.White, VisitedLinkColor = Color.White,
             LinkBehavior = LinkBehavior.AlwaysUnderline,
             // Keep the white link legible in both Windows color modes.
             BackColor = Color.FromArgb(25, 27, 29)
         };
-        author.LinkClicked += (_, _) => TrayApp.Open("https://ravensystems.io/"); Full(author, 30);
+        author.LinkClicked += (_, _) => TrayApp.Open("https://ravensystems.io/"); body.Controls.Add(author, 0, 2);
         AcceptButton = apply;
+        MinimumSize = SizeFromClientSize(ClientSize);
     }
     private Shortcut? Record(Shortcut current, Shortcut other)
     {

@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.6
+# KiYo for Windows — 0.1.0-alpha.7
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.
@@ -31,6 +31,12 @@ Uninstall from Windows Settings → Apps → Installed apps → KiYo.
 Updates and uninstall preserve settings and exceptions; uninstall removes only
 this installation's startup entry. Preferences remain in
 `%LOCALAPPDATA%\RavenSystems\KiYo\settings.json`.
+
+## Settings
+
+Settings uses two compact tabs: **General** and **Shortcuts and exceptions**.
+The Save and feedback buttons remain visible below the tabs. Only the exceptions
+list scrolls when it contains many words; the settings window itself does not.
 
 ## Spelling correction
 

@@ -63,7 +63,7 @@ try
     using (var key = Registry.CurrentUser.OpenSubKey(uninstallKey))
     {
         Check(key?.GetValue("DisplayName") is string name && name.Contains("KiYo"), "Registered in Windows Apps");
-        Check(key?.GetValue("DisplayVersion") as string == "0.1.0-alpha.6", "Installed version is alpha.6");
+        Check(key?.GetValue("DisplayVersion") as string == "0.1.0-alpha.7", "Installed version is alpha.7");
     }
     Check(State(window, "Запускать при входе в Windows") == ToggleState.Off, "Autostart defaults off");
     Toggle(window, "Запускать при входе в Windows");
@@ -81,6 +81,7 @@ try
     WaitExit(installer, 0);
     using (var key = Registry.CurrentUser.OpenSubKey(runKey))
         Check(key?.GetValue("KiYo") as string == '"' + executable + '"', "Selected autostart uses the installed executable");
+    CheckSettings(app);
     // AppMutex must reject an unattended update while KiYo is still running.
     var blocked = SilentInstall("blocked-update");
     Wait(() => blocked.HasExited, 45_000);
@@ -124,7 +125,7 @@ catch
         try
         {
             var process = Process.GetProcessById(candidate.Current.ProcessId);
-            if (!IsInstallerPath(process.MainModule?.FileName)) continue;
+            if (!IsInstallerPath(process.MainModule?.FileName) && process.MainModule?.FileName != executable) continue;
             Capture(candidate, "failure-" + process.Id + ".png");
             var lines = candidate.FindAll(TreeScope.Descendants, Condition.TrueCondition).Cast<AutomationElement>()
                 .Take(250).Select(e => $"{e.Current.ControlType.ProgrammaticName}: {e.Current.Name} [offscreen={e.Current.IsOffscreen}]");
@@ -223,9 +224,59 @@ static ToggleState State(AutomationElement window, string name) =>
     ((TogglePattern)(Find(window, name) ?? throw new Exception("Checkbox not found: " + name)).GetCurrentPattern(TogglePattern.Pattern)).Current.ToggleState;
 static void Toggle(AutomationElement window, string name) =>
     ((TogglePattern)(Find(window, name) ?? throw new Exception("Checkbox not found: " + name)).GetCurrentPattern(TogglePattern.Pattern)).Toggle();
+void CheckSettings(Process app)
+{
+    using var signal = EventWaitHandle.OpenExisting(@"Local\RavenSystems.KiYo.ShowSettings");
+    signal.Set();
+    AutomationElement? window = null;
+    Wait(() => (window = AutomationElement.RootElement.FindFirst(TreeScope.Children, new AndCondition(
+        new PropertyCondition(AutomationElement.ProcessIdProperty, app.Id),
+        new PropertyCondition(AutomationElement.NameProperty, "Настройки KiYo")))) is not null);
+    Wait(() => Find(window!, "Сохранить") is not null);
+    var settings = window!;
+    var bounds = settings.Current.BoundingRectangle;
+    var area = System.Windows.Forms.Screen.FromHandle((nint)settings.Current.NativeWindowHandle).WorkingArea;
+    Check(bounds.Left >= area.Left && bounds.Top >= area.Top && bounds.Right <= area.Right && bounds.Bottom <= area.Bottom,
+        "Settings fits the Windows working area");
+    void Visible(string name)
+    {
+        var element = Find(settings, name) ?? throw new Exception("Settings control missing: " + name);
+        var rect = element.Current.BoundingRectangle;
+        Check(!rect.IsEmpty && rect.Width > 0 && rect.Height > 0 && bounds.Contains(rect), "Settings control fully visible: " + name);
+    }
+    void NoPageScrolling()
+    {
+        foreach (AutomationElement element in settings.FindAll(TreeScope.Descendants, Condition.TrueCondition))
+        {
+            if (element.Current.IsOffscreen || element.Current.ControlType == ControlType.Edit) continue;
+            if (element.TryGetCurrentPattern(ScrollPattern.Pattern, out var value))
+            {
+                var scroll = ((ScrollPattern)value).Current;
+                Check(!scroll.HorizontallyScrollable && !scroll.VerticallyScrollable, "Settings container needs no scrolling");
+            }
+        }
+        Visible("Сохранить"); Visible("Ошибка или идея?"); Visible("Raven Systems · ravensystems.io");
+    }
+    foreach (var name in new[] { "Язык приложения", "Запуск при входе", "Автоисправление", "Исправление орфографии", "Короткие слова", "Словарь для раскладки" }) Visible(name);
+    NoPageScrolling();
+    Capture(settings, "06-settings-general-ru.png");
+    var tab = Find(settings, "Сочетания и исключения") ?? throw new Exception("Shortcuts tab missing");
+    ((SelectionItemPattern)tab.GetCurrentPattern(SelectionItemPattern.Pattern)).Select();
+    Wait(() => Find(settings, "Исправить выделение") is not null);
+    Visible("Исправить выделение"); Visible("Добавить в исключения");
+    var editor = settings.FindFirst(TreeScope.Descendants, new AndCondition(
+        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+        new PropertyCondition(AutomationElement.IsOffscreenProperty, false))) ?? throw new Exception("Exceptions editor missing");
+    ((ValuePattern)editor.GetCurrentPattern(ValuePattern.Pattern)).SetValue(string.Join("\r\n", Enumerable.Range(1, 80).Select(i => "example" + i)));
+    NoPageScrolling();
+    Capture(settings, "07-settings-shortcuts-ru.png");
+    // Closing without Save must leave the stored exceptions untouched.
+    ((WindowPattern)settings.GetCurrentPattern(WindowPattern.Pattern)).Close();
+    Check(File.ReadAllText(preferences).Contains("installertestword"), "Closing settings preserves existing exclusions");
+}
 void Capture(AutomationElement window, string name)
 {
-    // Capture only the installer-owned window on the isolated runner for visual review.
+    // Capture only installer or installed-app windows on the isolated runner for visual review.
     Native.SetForegroundWindow((nint)window.Current.NativeWindowHandle);
     Thread.Sleep(150);
     var bounds = window.Current.BoundingRectangle;
