@@ -157,7 +157,9 @@ void Uninstall(string name)
 {
     var process = Start(Path.Combine(target, "unins000.exe"), $"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=\"{evidence}/{name}.log\"");
     WaitExit(process, 0);
-    Wait(() => !File.Exists(executable));
+    // Inno's initial process can exit before its temporary second phase finishes
+    // removing directories. Reinstalling at that point races deferred cleanup.
+    Wait(() => !Directory.Exists(target) && !Directory.Exists(Path.GetDirectoryName(target)!));
 }
 static void Check(bool condition, string message)
 {
@@ -177,7 +179,7 @@ static void Wait(Func<bool> condition, int timeout = 30_000)
 static void WaitExit(Process process, int expected)
 {
     if (!process.WaitForExit(120_000)) throw new TimeoutException("Installer process did not exit.");
-    Check(process.ExitCode == expected, "Process exit code " + expected);
+    Check(process.ExitCode == expected, $"Process exit code {process.ExitCode}; expected {expected}");
 }
 static AutomationElement? Dialog(string title)
 {
