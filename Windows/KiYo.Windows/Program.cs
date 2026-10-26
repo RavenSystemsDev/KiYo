@@ -133,7 +133,7 @@ internal sealed class TrayApp : ApplicationContext
             "unchanged" => T("В выделении нет символов для смены раскладки.", "No layout characters to convert in the selection."),
             "shortcutBusy" => T("Сочетание занято другой программой. Выберите другое в настройках.", "A shortcut is in use by another app. Choose another in Settings."),
             "hookFailed" => T("Не удалось подключить обработку ввода. Перезапустите KiYo.", "Could not start keyboard observation. Restart KiYo."),
-            "inputFailed" => T("Windows не разрешила заменить текст. Проверьте результат; автосмена приостановлена.", "Windows could not complete text replacement. Check the text; auto correction is paused."),
+            "inputFailed" => T("Редактор не подтвердил исправление. Проверьте текст; автосмена приостановлена.", "The editor did not confirm the correction. Check the text; auto correction is paused."),
             "busy" => T("Редактор ещё отвечает. Попробуйте снова.", "The editor is still responding. Try again."),
             "selectionTooLong" => T("Выделите до 512 символов для добавления в исключения.", "Select up to 512 characters to add exceptions."),
             _ => T("Выделите текст в доступном для редактирования поле. Этот редактор может не поддерживаться.", "Select text in an editable field. This editor may be unsupported.")

@@ -3,7 +3,7 @@ using KiYo.Core;
 using System.Windows.Automation;
 using System.Windows.Automation.Text;
 namespace KiYo.Windows;
-internal sealed record TextSnapshot(nint Window, nint Focus, AutomationElement Element, TextPatternRange Range, string Text, bool IsTail);
+internal sealed record TextSnapshot(nint Window, nint Focus, AutomationElement Element, TextPatternRange Range, string Text, bool IsTail, NativeEditTarget? NativeEdit);
 internal static class TextAccess
 {
     private static AutomationElement? Editable(nint window)
@@ -55,13 +55,15 @@ internal static class TextAccess
         var selections = pattern.GetSelection();
         if (selections.Length != 1) return null;
         var selection = selections[0];
+        var focus = Native.Focus(window);
+        if (!NativeEdit.TryCapture(focus, out var nativeEdit)) return null;
         if (expectedTail != null)
         {
             if (!TailMatches(pattern, selection, expectedTail)) return null;
-            return new(window, Native.Focus(window), element, selection.Clone(), expectedTail, true);
+            return new(window, focus, element, selection.Clone(), expectedTail, true, nativeEdit);
         }
         var text = selection.GetText(8193);
-        return text.Length is > 0 and <= 8192 ? new(window, Native.Focus(window), element, selection.Clone(), text, false) : null;
+        return text.Length is > 0 and <= 8192 ? new(window, focus, element, selection.Clone(), text, false, nativeEdit) : null;
     }
     private static bool TailMatches(TextPattern pattern, TextPatternRange selection, string expected)
     {
@@ -77,6 +79,7 @@ internal static class TextAccess
     }
     internal static bool StillSelected(TextSnapshot snapshot)
     {
+        if (Native.Focus(snapshot.Window) != snapshot.Focus || snapshot.NativeEdit is { } nativeEdit && !NativeEdit.StillSelected(nativeEdit)) return false;
         var element = Editable(snapshot.Window);
         if (element == null || !Automation.Compare(element, snapshot.Element)) return false;
         var pattern = (TextPattern)element.GetCurrentPattern(TextPattern.Pattern);
@@ -85,4 +88,20 @@ internal static class TextAccess
         // UIA ranges are live. Equal endpoints alone do not prove unchanged text.
         return snapshot.IsTail ? TailMatches(pattern, ranges[0], snapshot.Text) : ranges[0].GetText(8193) == snapshot.Text;
     }
+    internal static bool ReplacementVisible(TextSnapshot original, string replacement)
+    {
+        if (replacement.Length is < 1 or > 16384 || Native.Focus(original.Window) != original.Focus) return false;
+        var element = Editable(original.Window);
+        if (element == null || !Automation.Compare(element, original.Element)) return false;
+        var pattern = (TextPattern)element.GetCurrentPattern(TextPattern.Pattern);
+        var ranges = pattern.GetSelection();
+        if (ranges.Length != 1 || ranges[0].CompareEndpoints(TextPatternRangeEndpoint.Start, ranges[0], TextPatternRangeEndpoint.End) != 0) return false;
+        var tail = ranges[0].Clone();
+        tail.MoveEndpointByUnit(TextPatternRangeEndpoint.Start, TextUnit.Character, -replacement.Length);
+        // Read only the just-written range. Endpoint units may differ for emoji;
+        // never inspect the full document to verify a selected-text conversion.
+        var match = tail.FindText(replacement, backward: true, ignoreCase: false);
+        return match != null && match.CompareEndpoints(TextPatternRangeEndpoint.End, ranges[0], TextPatternRangeEndpoint.End) == 0;
+    }
+
 }

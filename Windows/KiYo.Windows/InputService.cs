@@ -110,11 +110,15 @@ internal sealed class InputService : IDisposable
             }
             if (Native.GetForegroundWindow() != attempt.Window || Native.Focus(attempt.Window) != snapshot.Focus)
             { state.Invalidate(); return; }
-            if (!Native.Replace(attempt.Text.Length, analysis.Replacement))
-            { state.Invalidate(); report("inputFailed"); return; }
+            bool Current() => !disposed && preferences().Enabled && state.Current(attempt) &&
+                Native.GetForegroundWindow() == attempt.Window && Native.Focus(attempt.Window) == snapshot.Focus && !Native.ModifiersDown();
+            var replaced = Replace(snapshot, attempt.Text.Length, analysis.Replacement, Current);
+            if (replaced != ReplacementResult.Sent)
+            { state.Invalidate(); if (replaced == ReplacementResult.Failed) report("inputFailed"); return; }
             var requestedLayout = analysis.LayoutWord is { } last
                 ? Native.RequestLayout(attempt.Window, Layouts.IsRussian(last)) : 0;
-            if (!state.Applied(analysis, requestedLayout, DateTimeOffset.UtcNow)) state.Invalidate();
+            if (!state.Applied(analysis, requestedLayout, DateTimeOffset.UtcNow)) { state.Invalidate(); return; }
+            await VerifyReplacement(snapshot, analysis.Replacement, state.Revision);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -151,8 +155,11 @@ internal sealed class InputService : IDisposable
             {
                 var changed = Layouts.ConvertSelection(result.Text);
                 if (changed == result.Text) { report("unchanged"); return; }
-                if (!Native.Replace(0, changed)) { report("inputFailed"); return; }
-                report("converted");
+                bool Current() => !disposed && revision == state.Revision && Native.GetForegroundWindow() == window &&
+                    Native.Focus(window) == result.Focus && !Native.ModifiersDown();
+                var replaced = Replace(result, 0, changed, Current);
+                if (replaced != ReplacementResult.Sent) { if (replaced == ReplacementResult.Failed) report("inputFailed"); return; }
+                if (await VerifyReplacement(result, changed, revision)) report("converted");
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException) { report("unsupported"); }
@@ -161,6 +168,29 @@ internal sealed class InputService : IDisposable
             if (work is { IsCompleted: false }) _ = work.ContinueWith(t => { _ = t.Exception; Post(() => busy = false); }, TaskScheduler.Default);
             else busy = false;
         }
+    }
+    private static ReplacementResult Replace(TextSnapshot snapshot, int deleteCount, string replacement, Func<bool> current)
+    {
+        if (!current()) return ReplacementResult.Cancelled;
+        if (snapshot.NativeEdit is { } editor) return NativeEdit.Replace(editor, deleteCount, replacement, current);
+        return Native.Replace(deleteCount, replacement) ? ReplacementResult.Sent : ReplacementResult.Failed;
+    }
+    private async Task<bool> VerifyReplacement(TextSnapshot snapshot, string replacement, long revision)
+    {
+        // SendInput reports queued events, not text accepted by the editor.
+        // Keep the single worker occupied until that result is checked. Never
+        // retry a destructive replacement or restore over subsequent user input.
+        for (int i = 0; i < 6; i++)
+        {
+            if (disposed || state.Revision != revision || Native.GetForegroundWindow() != snapshot.Window || Native.Focus(snapshot.Window) != snapshot.Focus) return false;
+            bool visible;
+            try { visible = await Task.Run(() => TextAccess.ReplacementVisible(snapshot, replacement)); }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { visible = false; }
+            if (disposed || state.Revision != revision || Native.GetForegroundWindow() != snapshot.Window || Native.Focus(snapshot.Window) != snapshot.Focus) return false;
+            if (visible) return true;
+            await Task.Delay(20);
+        }
+        state.Invalidate(); report("inputFailed"); return false;
     }
     private void Post(Action action) { if (!disposed && !dispatcher.IsDisposed) try { dispatcher.BeginInvoke(action); } catch (InvalidOperationException) { } }
     public void Dispose()

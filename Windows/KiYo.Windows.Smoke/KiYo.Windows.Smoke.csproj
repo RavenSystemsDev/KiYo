@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="../KiYo.Core/KiYo.Core.csproj" />
     <Compile Include="../KiYo.Windows/TextAccess.cs" Link="TextAccess.cs" />
+    <Compile Include="../KiYo.Windows/NativeEdit.cs" Link="NativeEdit.cs" />
     <Compile Include="../KiYo.Windows/Native.cs" Link="Native.cs" />
     <Compile Include="../KiYo.Windows/SystemDictionary.cs" Link="SystemDictionary.cs" />
   </ItemGroup>

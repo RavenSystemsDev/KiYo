@@ -1,4 +1,4 @@
-> **Windows: ветка разработки.** Версия 0.1.0-alpha.8 с единым EXE-установщиком находится в [Windows/](Windows/README.md). Mac-версия и её DMG доступны в [ветке main](https://github.com/RavenSystemsDev/KiYo/tree/main).
+> **Windows: ветка разработки.** Версия 0.1.0-alpha.9 с единым EXE-установщиком находится в [Windows/](Windows/README.md). Mac-версия и её DMG доступны в [ветке main](https://github.com/RavenSystemsDev/KiYo/tree/main).
 
 <p align="center">
   <img src="Resources/AppIcon.png" width="128" alt="KiYo">

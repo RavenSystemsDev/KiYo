@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.8
+# KiYo for Windows — 0.1.0-alpha.9
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.
@@ -109,16 +109,29 @@ selection and exact tail text again before returning. A replacement requires a
 whitespace boundary before the observed suffix, or a confirmed document start.
 An incomplete word such as observed `usic` inside `music` is never replaced on its
 own. A provider that omits the preceding boundary is rejected rather than assumed
-to be at document start. Replacement is one SendInput
-batch with a final input-revision and native-focus check. Read failures back off
+to be at document start. Standard Unicode Edit/RichEdit controls (including the RichEditD2D family used
+by Windows Notepad) receive one `EM_REPLACESEL` operation for the validated
+range, with undo support. KiYo no longer deletes their text using a stream of
+Backspace events before injecting individual Unicode letters. Other supported
+editors retain the keyboard-input fallback. Both paths recheck input revision
+and focus and verify the resulting text through UI Automation. If an editor
+does not confirm the replacement while input/focus remain unchanged, KiYo pauses
+instead of repeating the destructive operation. Continued user input cancels
+verification; it is never overwritten by a rollback. Read failures back off
 and stop after five attempts for unchanged input; idle pending text expires after
 two seconds. An unresponsive provider keeps at most one outstanding call; typing
 continues. Words beyond the bounded suffix and unsupported fields can be skipped.
 
-Windows UIPI can reject injection; KiYo pauses if a replacement cannot complete.
+Windows UIPI can reject messages or injection; KiYo pauses if a replacement cannot be confirmed.
 No focus is forcibly changed. Validation and replacement cannot be made an atomic
 transaction with external editors, so real-editor acceptance remains required.
-See Microsoft's [SendInput documentation](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput)
+Regression coverage includes an isolated editor that accepts Backspace and spaces
+but rejects letter messages: the old successful `SendInput` batch leaves a gap,
+while whole-string replacement preserves the complete corrected word. This
+compatibility fixture does not substitute for testing each Windows Notepad build.
+
+See Microsoft's [EM_REPLACESEL documentation](https://learn.microsoft.com/en-us/windows/win32/controls/em-replacesel),
+[SendInput documentation](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput)
 and [UI Automation threading guidance](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-threading).
 
 Fast-input regression tests use a virtual editor/clock: 90 speed/delay combinations
