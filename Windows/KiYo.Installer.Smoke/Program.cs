@@ -316,6 +316,13 @@ void CheckSettings(Process app)
     Wait(() => Find(settings, "Введите одно слово длиной до 64 символов.") is not null);
     input.SetValue("");
     for (int i = 1; i <= 20; i++) Add("example" + i);
+    var list = settings.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.AutomationIdProperty, "ExceptionsScroll"))
+        ?? throw new Exception("Exceptions list missing");
+    var listScroll = (ScrollPattern)list.GetCurrentPattern(ScrollPattern.Pattern);
+    Check(listScroll.Current.VerticallyScrollable && !listScroll.Current.HorizontallyScrollable, "Only the long exceptions list scrolls vertically");
+    listScroll.SetScrollPercent(ScrollPattern.NoScroll, 100);
+    Wait(() => Find(settings, "Удалить installertestword") is not null);
+    listScroll.SetScrollPercent(ScrollPattern.NoScroll, 0);
     NoPageScrolling(); Capture(settings, "07-settings-shortcuts-ru.png");
     // Closing a changed draft must leave the saved file byte-for-byte intact.
     Close(settings); Wait(() => AppWindow("Настройки KiYo") is null);

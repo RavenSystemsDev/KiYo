@@ -27,4 +27,24 @@
     </Grid></ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="TextBox"><Setter Property="Background" Value="#19191B"/><Setter Property="Foreground" Value="#F4F4F5"/><Setter Property="CaretBrush" Value="White"/><Setter Property="SelectionBrush" Value="#3B7456"/><Setter Property="Padding" Value="10,6"/><Setter Property="BorderBrush" Value="#44444A"/><Setter Property="BorderThickness" Value="1"/><Setter Property="VerticalContentAlignment" Value="Center"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TextBox"><Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}"><ScrollViewer x:Name="PART_ContentHost"/></Border><ControlTemplate.Triggers><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="#8BD5AC"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+  <Style x:Key="ScrollTrackButton" TargetType="RepeatButton">
+    <Setter Property="Focusable" Value="False"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="DarkScrollThumb" TargetType="Thumb">
+    <Setter Property="MinHeight" Value="20"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Thumb"><Border x:Name="Grip" Background="#55555D" CornerRadius="4" Margin="2,0"/><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="#777780"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="ScrollBar">
+    <Style.Triggers><Trigger Property="Orientation" Value="Vertical">
+      <Setter Property="Width" Value="10"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar">
+        <Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True">
+          <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Style="{StaticResource ScrollTrackButton}"/></Track.DecreaseRepeatButton>
+          <Track.Thumb><Thumb Style="{StaticResource DarkScrollThumb}"/></Track.Thumb>
+          <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Style="{StaticResource ScrollTrackButton}"/></Track.IncreaseRepeatButton>
+        </Track>
+      </ControlTemplate></Setter.Value></Setter>
+    </Trigger></Style.Triggers>
+  </Style>
 </ResourceDictionary>

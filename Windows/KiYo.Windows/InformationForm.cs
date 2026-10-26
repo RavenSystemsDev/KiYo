@@ -12,7 +12,7 @@ internal sealed class InformationForm : DarkForm
     {
         Text = guide ? app.T("Инструкция KiYo", "KiYo user guide") : app.T("О KiYo", "About KiYo");
         Icon = icon; AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
-        ClientSize = new System.Drawing.Size(550, guide ? 530 : 370); MinimumSize = SizeFromClientSize(ClientSize);
+        ClientSize = new System.Drawing.Size(550, guide ? 470 : 370); MinimumSize = SizeFromClientSize(ClientSize);
         StartPosition = FormStartPosition.CenterParent; MinimizeBox = false; MaximizeBox = false;
         var root = new Wpf.Grid { Margin = new Thickness(24, 16, 24, 16) };
         root.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/KiYo;component/Theme.xaml", UriKind.Relative) });
