@@ -41,6 +41,20 @@ internal sealed class SettingsForm : Form
         Row(app.T("Короткие слова", "Short words"), shorts);
         var dictionary = new CheckBox { Checked = prefs.UseSystemDictionary, Text = app.T("Использовать", "Use"), CheckAlign = ContentAlignment.MiddleRight, TextAlign = ContentAlignment.MiddleRight };
         Row(app.T("Словарь для раскладки", "Layout dictionary"), dictionary);
+        var dictionaryStatus = new Label { Text = app.T("Словари Windows: проверяем…", "Windows dictionaries: checking…"), AutoSize = false };
+        Full(dictionaryStatus, 34);
+        Shown += async (_, _) =>
+        {
+            var available = await Task.Run(() =>
+            {
+                using var system = new SystemDictionary();
+                return (Russian: system.Available(true), English: system.Available(false));
+            });
+            if (IsDisposed || dictionaryStatus.IsDisposed) return;
+            string Status(bool present) => present ? app.T("есть", "installed") : app.T("нет", "missing");
+            dictionaryStatus.Text = app.T("Словари Windows: ", "Windows dictionaries: ") +
+                $"RU — {Status(available.Russian)}, EN — {Status(available.English)}";
+        };
         var convertButton = new Button { Text = convert.ToString() };
         convertButton.Click += (_, _) => { var chosen = Record(convert, exclude); if (chosen != null) { convert = chosen; convertButton.Text = chosen.ToString(); } };
         Row(app.T("Исправить выделение", "Convert selection"), convertButton);

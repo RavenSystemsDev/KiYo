@@ -46,6 +46,7 @@ addresses and identifiers are left alone. Ambiguous suggestions, unavailable
 language dictionaries, and protected or unsupported fields are skipped. This
 corrects individual typos; it does not rewrite grammar or split joined words.
 Backspace/retyping a rejected correction keeps the existing one-retry behavior.
+Settings shows whether RU and EN dictionaries are installed.
 If a language dictionary is missing, install that language's **Basic typing**
 feature in Windows Settings → Time & language → Language & region.
 

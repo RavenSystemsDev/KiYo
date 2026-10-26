@@ -35,6 +35,11 @@ internal sealed class SystemDictionary : IDisposable
         }
         return checker;
     }
+    internal bool Available(bool russian)
+    {
+        try { return Checker(russian) != null; }
+        catch (Exception ex) when (ex is COMException or InvalidCastException or TypeLoadException) { return false; }
+    }
     internal bool? Valid(string word, bool russian)
     {
         try

@@ -10,6 +10,7 @@ if (count < 1) throw new Exception("No keyboard layouts available");
 var layouts = new nint[count]; Native.GetKeyboardLayoutList(count, layouts);
 using (var dictionary = new SystemDictionary())
 {
+    if (!dictionary.Available(false)) throw new Exception("English dictionary availability mismatch");
     if (dictionary.Valid("hello", false) != true) throw new Exception("en-US dictionary could not validate hello");
     if (dictionary.Valid("ghbdtn", false) != false) throw new Exception("Dictionary accepted wrong-layout input");
     var proposals = dictionary.Suggest("helllo", false);
@@ -20,7 +21,7 @@ using (var dictionary = new SystemDictionary())
         throw new Exception("Spelling changed an exclusion");
     if (Spelling.Correct("hello", [], dictionary.Valid, dictionary.Suggest) != null)
         throw new Exception("Spelling changed a correct word");
-    if (dictionary.Valid("привет", true) == true)
+    if (dictionary.Available(true))
     {
         var russian = Spelling.Correct("праивльно", [], dictionary.Valid, dictionary.Suggest);
         if (russian != "правильно") throw new Exception("Russian spelling correction failed");
