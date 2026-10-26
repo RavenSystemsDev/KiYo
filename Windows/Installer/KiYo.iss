@@ -34,7 +34,7 @@ DisableDirPage=yes
 DisableProgramGroupPage=yes
 DisableReadyPage=yes
 DisableFinishedPage=no
-ShowLanguageDialog=auto
+ShowLanguageDialog=yes
 LanguageDetectionMethod=uilanguage
 OutputDir=..\artifacts
 OutputBaseFilename=KiYo-Setup
@@ -67,7 +67,7 @@ const
   Secondary = $B8B1AC;
 var
   Surface: TPanel;
-  Logo, TrayLogo: TBitmapImage;
+  Logo, TrayLogo, ProgressTrack: TBitmapImage;
   Heading, Subtitle, Features, Percentage, TrayHint: TNewStaticText;
   OptionsButton, LicenseButton, CloseButton: TNewButton;
   StartupCheck: TNewCheckBox;
@@ -246,6 +246,11 @@ begin
   Features.Alignment := taLeftJustify;
   Features.Left := ScaleX(52);
   Features.Width := ScaleX(370);
+  ProgressTrack := TBitmapImage.Create(WizardForm);
+  ProgressTrack.Parent := Surface;
+  ProgressTrack.SetBounds(ScaleX(40), ScaleY(336), ScaleX(380), ScaleY(12));
+  ProgressTrack.Bitmap.Width := ProgressTrack.Width;
+  ProgressTrack.Bitmap.Height := ProgressTrack.Height;
   Percentage := Text(Surface, '0%', 362, 28, 11);
   Percentage.Font.Color := Secondary;
   WizardForm.ProgressGauge.Parent := Surface;
@@ -282,10 +287,14 @@ begin
   TrayLogo.PngImage.Assign(Logo.PngImage);
   TrayLogo.Stretch := True;
   TrayLogo.BackColor := $272523;
-  TrayText := Text(TrayPanel, '⌃', 20, 26, 16);
+  TrayText := Text(TrayPanel, #$E70D, 20, 26, 16);
+  TrayText.Font.Name := 'Segoe MDL2 Assets';
   TrayText.SetBounds(ScaleX(30), ScaleY(18), ScaleX(32), ScaleY(30));
-  TrayText := Text(TrayPanel, '◉   ▮)))   14:27', 22, 26, 12);
-  TrayText.SetBounds(ScaleX(158), ScaleY(22), ScaleX(180), ScaleY(26));
+  TrayText := Text(TrayPanel, #$E701 + '   ' + #$E767, 22, 26, 15);
+  TrayText.Font.Name := 'Segoe MDL2 Assets';
+  TrayText.SetBounds(ScaleX(158), ScaleY(22), ScaleX(88), ScaleY(26));
+  TrayText := Text(TrayPanel, '14:27', 22, 26, 11);
+  TrayText.SetBounds(ScaleX(260), ScaleY(22), ScaleX(70), ScaleY(26));
   TrayHint := Text(Surface, T('Также ищите KiYo под стрелкой ⌃', 'KiYo may also be under the ⌃ arrow'), 388, 22, 9);
   TrayHint.Font.Color := Secondary;
   CloseButton := TNewButton.Create(WizardForm);
@@ -333,7 +342,8 @@ begin
   for I := 0 to Surface.ControlCount - 1 do
     if Surface.Controls[I].Tag = 1 then Surface.Controls[I].Visible := IsWelcome;
   Percentage.Visible := IsInstalling;
-  WizardForm.ProgressGauge.Visible := IsInstalling;
+  WizardForm.ProgressGauge.Visible := False;
+  ProgressTrack.Visible := IsInstalling;
   StartupCheck.Visible := IsFinished;
   TrayPanel.Visible := IsFinished;
   TrayHint.Visible := IsFinished;
@@ -354,9 +364,26 @@ begin
 end;
 
 procedure CurInstallProgressChanged(CurProgress, MaxProgress: Integer);
+var Filled, Radius: Integer;
 begin
-  if MaxProgress > 0 then
-    Percentage.Caption := IntToStr(Round(100.0 * CurProgress / MaxProgress)) + '%';
+  if MaxProgress <= 0 then Exit;
+  Percentage.Caption := IntToStr(Round(100.0 * CurProgress / MaxProgress)) + '%';
+  Radius := ProgressTrack.Height;
+  Filled := Round(1.0 * ProgressTrack.Width * CurProgress / MaxProgress);
+  with ProgressTrack.Bitmap.Canvas do begin
+    Brush.Color := Background;
+    Pen.Color := Background;
+    Rectangle(0, 0, ProgressTrack.Width, Radius);
+    Brush.Color := $35322F;
+    Pen.Color := $35322F;
+    RoundRect(0, 0, ProgressTrack.Width, Radius, Radius, Radius);
+    if Filled > 0 then begin
+      Brush.Color := $7FC126;
+      Pen.Color := $7FC126;
+      RoundRect(0, 0, Filled, Radius, Radius, Radius);
+    end;
+  end;
+  ProgressTrack.Repaint;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
