@@ -43,7 +43,10 @@ internal static class Fixture
             {
                 editor.Focus();
                 editor.Select(mode == "selected" ? 0 : editor.Text.Length, mode == "selected" ? 6 : 0);
-                File.WriteAllText(file, form.Handle.ToInt64().ToString()); timer.Start();
+                // Publish the handle only after its file is closed: the parent may
+                // otherwise observe File.Exists while WriteAllText still owns the file.
+                File.WriteAllText(file + ".ready", form.Handle.ToInt64().ToString());
+                File.Move(file + ".ready", file); timer.Start();
             };
             Forms.Application.Run(form);
         });
@@ -127,7 +130,7 @@ internal static class Fixture
             finally
             {
                 if (!child.HasExited) { child.Kill(); child.WaitForExit(); }
-                File.Delete(file); File.Delete(file + ".text"); File.Delete(file + ".change");
+                File.Delete(file); File.Delete(file + ".ready"); File.Delete(file + ".text"); File.Delete(file + ".change");
             }
         }
     }
