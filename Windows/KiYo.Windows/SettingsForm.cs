@@ -50,7 +50,7 @@ internal sealed class SettingsForm : Form
         }
         var general = Page(app.T("Основные", "General"));
         var typing = Page(app.T("Сочетания и исключения", "Shortcuts and exceptions"));
-        Full(general, new Label { Text = app.T("Исправления после пробела. Текст остаётся на компьютере.", "Corrections after a space. Text stays on your computer.") }, 26);
+        Full(general, new Label { Text = app.T("KiYo — рядом с часами. Исправления после пробела.", "Find KiYo beside the clock. Corrections after a space.") }, 26);
         var language = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         language.Items.AddRange(new object[] { app.T("Как в системе", "System language"), "Русский", "English" });
         language.SelectedIndex = prefs.Language == "ru" ? 1 : prefs.Language == "en" ? 2 : 0;

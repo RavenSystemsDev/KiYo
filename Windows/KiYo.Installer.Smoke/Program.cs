@@ -260,8 +260,19 @@ void CheckSettings(Process app)
     foreach (var name in new[] { "Язык приложения", "Запуск при входе", "Автоисправление", "Исправление орфографии", "Короткие слова", "Словарь для раскладки" }) Visible(name);
     NoPageScrolling();
     Capture(settings, "06-settings-general-ru.png");
-    var tab = Find(settings, "Сочетания и исключения") ?? throw new Exception("Shortcuts tab missing");
-    ((SelectionItemPattern)tab.GetCurrentPattern(SelectionItemPattern.Pattern)).Select();
+    // The WinForms provider may expose only the selected tab. Exercise the
+    // standard keyboard navigation while focus belongs to this test app.
+    var tab = Find(settings, "Основные") ?? throw new Exception("General tab missing");
+    tab.SetFocus();
+    Check(Native.GetForegroundWindow() == (nint)settings.Current.NativeWindowHandle, "Settings owns focus before tab navigation");
+    Exception? navigationError = null;
+    var keyboard = new Thread(() =>
+    {
+        try { System.Windows.Forms.SendKeys.SendWait("{RIGHT}"); }
+        catch (Exception error) { navigationError = error; }
+    });
+    keyboard.SetApartmentState(ApartmentState.STA); keyboard.Start(); keyboard.Join();
+    if (navigationError is not null) throw navigationError;
     Wait(() => Find(settings, "Исправить выделение") is not null);
     Visible("Исправить выделение"); Visible("Добавить в исключения");
     var editor = settings.FindFirst(TreeScope.Descendants, new AndCondition(
@@ -298,4 +309,6 @@ static class Native
     internal static extern uint GetLongPathName(string shortPath, StringBuilder longPath, int capacity);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool SetForegroundWindow(nint window);
+    [DllImport("user32.dll")]
+    internal static extern nint GetForegroundWindow();
 }
