@@ -13,3 +13,12 @@ notices. Self-contained builds include the license and third-party notice files
 provided by the exact Microsoft runtime packages under runtime-notices/. System Windows components and
 fonts remain subject to Microsoft's terms. Windows UI Automation and Spell
 Checking are operating-system services, not third-party code copied into KiYo.
+
+Inno Setup 6.7.3 (installer/uninstaller engine)
+Copyright (C) 1997-2026 Jordan Russell. All rights reserved.
+Portions Copyright (C) 2000-2026 Martijn Laan. All rights reserved.
+https://jrsoftware.org/
+https://github.com/jrsoftware/issrc/blob/is-6_7_3/license.txt
+The installer is compiled using Inno Setup. Its license permits distribution
+of generated installers, including for commercial use. The compiler is a build
+dependency and is not installed on the user's computer.

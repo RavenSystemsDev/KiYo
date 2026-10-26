@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.3
+# KiYo for Windows — 0.1.0-alpha.4
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.
@@ -14,6 +14,24 @@ The native window and input APIs are separate from the platform-independent
 `KiYo.Core` library. Its initial word lists are ported from the macOS source.
 No dictionary or font from an unrelated third party is included.
 
+## Install
+
+Download **KiYo-Setup.exe** from the `KiYo-Windows-Setup` artifact of a successful
+[Windows alpha build](https://github.com/RavenSystemsDev/KiYo/actions/workflows/windows.yml?query=branch%3Awindows).
+GitHub wraps artifacts in a ZIP: extract it, then open the single installer EXE.
+The accompanying `.sha256` file is an optional integrity check, not an installer.
+The same EXE supports Windows 11 on Intel/AMD x64 and ARM64 and chooses the native
+app automatically. .NET is included; installation does not need internet or admin rights.
+
+The installer offers Russian/English, a dark welcome/progress/completion flow,
+optional installation folder and desktop shortcut, and optional launch at login.
+By default the app is installed in `%LOCALAPPDATA%\Programs\Raven Systems\KiYo`.
+Open KiYo from Start or beside the clock. Close KiYo before installing an update.
+Uninstall from Windows Settings → Apps → Installed apps → KiYo.
+Updates and uninstall preserve settings and exceptions; uninstall removes only
+this installation's startup entry. Preferences remain in
+`%LOCALAPPDATA%\RavenSystems\KiYo\settings.json`.
+
 ## Build and test
 
 Install the .NET 10 SDK, then run:
@@ -21,9 +39,10 @@ Install the .NET 10 SDK, then run:
 ```powershell
 dotnet run --project Windows/KiYo.Tests/KiYo.Tests.csproj -c Release
 dotnet run --project Windows/KiYo.Windows.Smoke/KiYo.Windows.Smoke.csproj -c Release
+# Install Inno Setup 6.7.3, then build the universal installer:
+./Windows/build-installer.ps1
+# Optional advanced portable distribution:
 ./Windows/package.ps1 -Runtime win-x64
-# For ARM PCs:
-./Windows/package.ps1 -Runtime win-arm64
 ```
 
 Core tests also run on macOS/Linux. Cross-compilation on macOS verifies C# and
@@ -34,8 +53,12 @@ and read-only fields are rejected, and tests selected-text/tail replacement ther
 Email/password labels are checked through UI Automation and focused-control MSAA
 metadata, including controls whose native UIA provider omits their accessible name.
 This requires an interactive Windows desktop; it never targets an existing user
-document. GitHub Actions is configured to build both portable archives.
-It does not publish them as a stable release automatically.
+document. GitHub Actions builds both native payloads into one EXE and tests its
+Russian/English UI, launch, selected architecture, shortcuts, update protection,
+settings retention and uninstall on a disposable Windows runner. UI screenshots
+and logs are saved in a separate diagnostic artifact. The compiler download is
+pinned to Inno Setup 6.7.3 and verified by SHA256 and publisher signature.
+It does not publish a stable release automatically.
 
 The archives include .NET and runtime license notices. Extract the full folder,
 then run `KiYo.exe`. Do not move only the EXE away from the accompanying files.
@@ -86,7 +109,7 @@ one Chromium/Electron editor:
 - Move caret/click/change app during validation: no stale replacement.
 - Shortcut conflicts, first run in RU/EN, pause, duplicate launch, real logout/login.
 
-No Authenticode signing, installer/updater, sync or spelling-error correction is
+No Authenticode signing, automatic updater, sync or spelling-error correction is
 included in this alpha. Standard US English and Russian layouts only; IMEs and
 other layouts are skipped. Native compatibility requires actual Windows testing.
 

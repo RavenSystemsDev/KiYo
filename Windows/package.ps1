@@ -1,6 +1,7 @@
 param(
     [ValidateSet('win-x64', 'win-arm64')][string]$Runtime = 'win-x64',
-    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$')][string]$Version = '0.1.0-alpha.3'
+    [ValidatePattern('^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$')][string]$Version = '0.1.0-alpha.4',
+    [switch]$NoArchive
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -31,6 +32,7 @@ foreach ($package in @("microsoft.netcore.app.runtime.$Runtime", "microsoft.wind
     $files | ForEach-Object { Copy-Item $_.FullName (Join-Path $destination $_.Name) -Force }
 }
 Copy-Item "$root/INSTALL.txt" "$output/START-HERE.txt"
+if ($NoArchive) { Write-Output $output; return }
 $zip = "$output.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path $output -DestinationPath $zip -CompressionLevel Optimal

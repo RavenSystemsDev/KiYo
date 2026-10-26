@@ -22,17 +22,34 @@ jobs:
         run: dotnet run --project Windows/KiYo.Tests/KiYo.Tests.csproj -c Release
       - name: Windows native smoke test
         run: dotnet run --project Windows/KiYo.Windows.Smoke/KiYo.Windows.Smoke.csproj -c Release
+      - name: Install verified installer compiler
+        shell: pwsh
+        run: ./Windows/Installer/install-compiler.ps1 -Destination "$env:RUNNER_TEMP/InnoSetup"
       - name: Package x64
         shell: pwsh
-        run: ./Windows/package.ps1 -Runtime win-x64
+        run: ./Windows/package.ps1 -Runtime win-x64 -NoArchive
       - name: Package ARM64
         shell: pwsh
-        run: ./Windows/package.ps1 -Runtime win-arm64
+        run: ./Windows/package.ps1 -Runtime win-arm64 -NoArchive
+      - name: Build universal installer
+        shell: pwsh
+        run: ./Windows/build-installer.ps1 -SkipPublish -Compiler "$env:RUNNER_TEMP/InnoSetup/ISCC.exe"
+      - name: Installer lifecycle and UI tests
+        shell: pwsh
+        run: dotnet run --project Windows/KiYo.Installer.Smoke/KiYo.Installer.Smoke.csproj -c Release -- "$pwd/Windows/artifacts/KiYo-Setup.exe" "$env:RUNNER_TEMP/kiyo-installer-checks"
       - uses: actions/upload-artifact@v4
         with:
-          name: KiYo-Windows-alpha
+          name: KiYo-Windows-Setup
           path: |
-            Windows/artifacts/*.zip
-            Windows/artifacts/*.sha256
+            Windows/artifacts/KiYo-Setup.exe
+            Windows/artifacts/KiYo-Setup.exe.sha256
           if-no-files-found: error
           retention-days: 14
+      - name: Installer check screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: KiYo-installer-checks
+          path: ${{ runner.temp }}/kiyo-installer-checks/
+          if-no-files-found: ignore
+          retention-days: 7

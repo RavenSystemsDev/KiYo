@@ -1,9 +1,14 @@
-KiYo for Windows 0.1.0-alpha.3 — Raven Systems
+KiYo for Windows 0.1.0-alpha.4 — Raven Systems
 
 ENGLISH
-Windows 11. Choose win-x64 for Intel/AMD PCs, win-arm64 for ARM PCs.
-Extract the entire ZIP to a permanent folder, e.g. your user Applications folder.
-Run KiYo.exe inside it. .NET is included; no SDK or administrator access is needed.
+Windows 11. Open KiYo-Setup.exe and click Install.
+The installer automatically chooses Intel/AMD x64 or ARM64. .NET is included;
+no download, SDK or administrator access is needed. If downloaded from GitHub
+Actions, extract its ZIP first; it contains the installer and a checksum file.
+Use Installation options to choose a folder or add a desktop shortcut.
+Close KiYo before updating. Uninstall from Windows Settings > Apps > KiYo.
+Settings and exclusions are preserved when updating or uninstalling.
+Advanced portable ZIP: extract ALL files, then run KiYo.exe in that folder.
 Look for KiYo beside the clock (possibly under the hidden-icons arrow).
 Double-click the icon for Settings; right-click for Pause and Quit.
 Enable English (United States) and Russian keyboards in Windows Settings.
@@ -15,7 +20,7 @@ Ctrl+Alt+R converts selected text; Ctrl+Alt+K adds selected words to exceptions.
 Change both shortcuts in Settings. Launch at login is optional and off initially.
 Disable it before moving/deleting the portable folder.
 
-Alpha limitations: no Authenticode signing, no installer/updater, no iCloud sync,
+Alpha limitations: no Authenticode signing, no automatic updater, no iCloud sync,
 no automatic spelling fixes. Windows dictionaries help detect layout mistakes;
 install Russian language spelling features for a wider vocabulary. Fast typing
 keeps completed words pending and retries the latest text after a short pause;
@@ -26,8 +31,14 @@ does not elevate itself or bypass Windows restrictions. This build needs physica
 keyboard acceptance testing on Windows before it is called stable.
 
 RUSSIAN
-Windows 11. win-x64 — компьютеры Intel/AMD; win-arm64 — компьютеры ARM.
-Распакуйте ВЕСЬ архив в постоянную папку и запустите KiYo.exe.
+Windows 11. Откройте KiYo-Setup.exe и нажмите «Установить».
+Установщик сам выберет версию для Intel/AMD или ARM; .NET уже внутри.
+Если скачали архив GitHub Actions — сначала распакуйте его: внутри установщик
+и файл контрольной суммы. Устанавливать .NET отдельно не нужно.
+«Параметры установки» позволяют выбрать папку и ярлык рабочего стола.
+Перед обновлением закройте KiYo. Удаление: Параметры Windows > Приложения > KiYo.
+Настройки и исключения сохраняются при обновлении и удалении.
+Для переносного ZIP: распакуйте ВЕСЬ архив и запустите KiYo.exe из его папки.
 Значок появится возле часов, иногда под стрелкой скрытых значков.
 Двойной щелчок — настройки; правая кнопка — пауза и выход.
 Добавьте английскую (США) и русскую раскладки в настройках Windows.
@@ -37,7 +48,7 @@ Ctrl+Alt+R — исправить выделенный текст; Ctrl+Alt+K �
 Сочетания настраиваются. Автозапуск включается по желанию.
 Перед переносом или удалением папки отключите автозапуск.
 
-Это первая alpha: требуется проверка физическим вводом на Windows.
+Это alpha-версия: требуется проверка физическим вводом на Windows.
 При быстром вводе завершённые слова сохраняются для повторной проверки.
 После короткой паузы исправляется накопленный фрагмент; недописанное слово
 сохраняется. Буфер ограничен 1024 символами и очищается после двух секунд простоя.
