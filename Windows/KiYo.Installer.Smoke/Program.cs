@@ -234,8 +234,21 @@ void CheckSettings(Process app)
         Wait(() => Find(found!, title == "KiYo settings" ? "Save" : "Сохранить") is not null);
         return found!;
     }
-    AutomationElement? AppWindow(string title) => AutomationElement.RootElement.FindFirst(TreeScope.Children, new AndCondition(
-        new PropertyCondition(AutomationElement.ProcessIdProperty, app.Id), new PropertyCondition(AutomationElement.NameProperty, title)));
+    AutomationElement? AppWindow(string title)
+    {
+        // UIA exposes an owned modal dialog below its owner, not necessarily
+        // as a direct desktop child. Search only this disposable test process.
+        var condition = new AndCondition(new PropertyCondition(AutomationElement.NameProperty, title),
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Window));
+        foreach (AutomationElement candidate in AutomationElement.RootElement.FindAll(TreeScope.Children,
+            new PropertyCondition(AutomationElement.ProcessIdProperty, app.Id)))
+        {
+            if (candidate.Current.Name == title) return candidate;
+            var owned = candidate.FindFirst(TreeScope.Descendants, condition);
+            if (owned is not null) return owned;
+        }
+        return null;
+    }
     AutomationElement Control(AutomationElement window, string name, ControlType type) => window.FindFirst(TreeScope.Descendants, new AndCondition(
         new PropertyCondition(AutomationElement.ControlTypeProperty, type), new PropertyCondition(AutomationElement.NameProperty, name),
         new PropertyCondition(AutomationElement.IsOffscreenProperty, false))) ?? throw new Exception("Control not found: " + name);
