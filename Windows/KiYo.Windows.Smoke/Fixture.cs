@@ -125,6 +125,10 @@ internal static class Fixture
                     if (NativeEdit.Replace(snapshot.NativeEdit, Body(mode).Length, "привет ", () => false) != ReplacementResult.Cancelled)
                         throw new Exception("Cancelled replacement was not rejected");
                     if (!TextAccess.StillSelected(snapshot)) throw new Exception("Cancelled native replacement changed text or selection");
+                    int validations = 0;
+                    if (NativeEdit.Replace(snapshot.NativeEdit, Body(mode).Length, "привет ", () => ++validations == 1) != ReplacementResult.Cancelled)
+                        throw new Exception("Input revision change during selection was not rejected");
+                    if (!TextAccess.StillSelected(snapshot)) throw new Exception("Cancelled range selection was not restored");
                     Console.WriteLine("PASS: cancelled native edit leaves original text and caret intact");
                     continue;
                 }

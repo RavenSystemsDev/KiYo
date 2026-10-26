@@ -113,8 +113,15 @@ internal sealed class InputService : IDisposable
             bool Current() => !disposed && preferences().Enabled && state.Current(attempt) &&
                 Native.GetForegroundWindow() == attempt.Window && Native.Focus(attempt.Window) == snapshot.Focus && !Native.ModifiersDown();
             var replaced = Replace(snapshot, attempt.Text.Length, analysis.Replacement, Current);
-            if (replaced != ReplacementResult.Sent)
-            { state.Invalidate(); if (replaced == ReplacementResult.Failed) report("inputFailed"); return; }
+            if (replaced == ReplacementResult.Cancelled)
+            {
+                // New typing during selection keeps the latest pending suffix.
+                // Only an unchanged, repeatedly rejected attempt is retired.
+                if (state.Current(attempt) && !schedule.Retry(attempt.Revision, Environment.TickCount64)) state.Invalidate();
+                return;
+            }
+            if (replaced == ReplacementResult.Failed)
+            { state.Invalidate(); report("inputFailed"); return; }
             var requestedLayout = analysis.LayoutWord is { } last
                 ? Native.RequestLayout(attempt.Window, Layouts.IsRussian(last)) : 0;
             if (!state.Applied(analysis, requestedLayout, DateTimeOffset.UtcNow)) { state.Invalidate(); return; }
@@ -190,6 +197,7 @@ internal sealed class InputService : IDisposable
             if (visible) return true;
             await Task.Delay(20);
         }
+        if (disposed || state.Revision != revision || Native.GetForegroundWindow() != snapshot.Window || Native.Focus(snapshot.Window) != snapshot.Focus) return false;
         state.Invalidate(); report("inputFailed"); return false;
     }
     private void Post(Action action) { if (!disposed && !dispatcher.IsDisposed) try { dispatcher.BeginInvoke(action); } catch (InvalidOperationException) { } }
