@@ -48,10 +48,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Files]
-Source: "..\artifacts\KiYo-Windows-{#AppVersion}-win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: not IsArm64
-Source: "..\artifacts\KiYo-Windows-{#AppVersion}-win-arm64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsArm64
 Source: "..\..\Resources\AppIcon.png"; Flags: dontcopy
 Source: "..\..\LICENSE"; Flags: dontcopy
+Source: "..\artifacts\KiYo-Windows-{#AppVersion}-win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: not IsArm64
+Source: "..\artifacts\KiYo-Windows-{#AppVersion}-win-arm64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsArm64
 
 [Icons]
 Name: "{userprograms}\KiYo"; Filename: "{app}\KiYo.exe"; WorkingDir: "{app}"; Comment: "KiYo — Raven Systems"

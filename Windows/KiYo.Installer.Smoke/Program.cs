@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -39,9 +40,11 @@ try
     Wait(() => Dialog("Параметры установки") is not null);
     var options = Dialog("Параметры установки")!;
     Toggle(options, "Ярлык на рабочем столе");
+    Capture(options, "00-options-ru.png");
     Click(options, "Сохранить");
     Click(window, "Лицензия");
     Wait(() => Dialog("Лицензия KiYo") is not null);
+    Capture(Dialog("Лицензия KiYo")!, "00-license.png");
     Click(Dialog("Лицензия KiYo")!, "Готово");
     Capture(window, "01-welcome-ru.png");
     var clickInstall = Task.Run(() => Click(window, "Установить"));
@@ -114,6 +117,23 @@ try
         Check(key?.GetValue("KiYo") as string == @"""C:\PortableKiYo\KiYo.exe""", "Uninstall leaves another copy's autostart alone");
     Console.WriteLine("PASS: installer RU/EN UI, launch, architecture, shortcuts, notices, running-app protection, update, uninstall and retained preferences.");
 }
+catch
+{
+    foreach (AutomationElement candidate in AutomationElement.RootElement.FindAll(TreeScope.Children, Condition.TrueCondition))
+    {
+        try
+        {
+            var process = Process.GetProcessById(candidate.Current.ProcessId);
+            if (!IsInstallerPath(process.MainModule?.FileName)) continue;
+            Capture(candidate, "failure-" + process.Id + ".png");
+            var lines = candidate.FindAll(TreeScope.Descendants, Condition.TrueCondition).Cast<AutomationElement>()
+                .Take(250).Select(e => $"{e.Current.ControlType.ProgrammaticName}: {e.Current.Name} [offscreen={e.Current.IsOffscreen}]");
+            File.WriteAllLines(Path.Combine(evidence, "failure-ui.txt"), lines);
+        }
+        catch (Exception diagnosticError) { Console.WriteLine("Diagnostic capture: " + diagnosticError.Message); }
+    }
+    throw;
+}
 finally
 {
     foreach (var process in children)
@@ -168,12 +188,19 @@ static AutomationElement? Dialog(string title)
         {
             var process = Process.GetProcessById(window.Current.ProcessId);
             var path = process.MainModule?.FileName;
-            if (path is not null && Path.GetFileName(path).StartsWith("KiYo-Setup", StringComparison.OrdinalIgnoreCase)
-                && path.StartsWith(Path.GetTempPath(), StringComparison.OrdinalIgnoreCase)) return window;
+            if (IsInstallerPath(path)) return window;
         }
         catch (ArgumentException) { }
     }
     return null;
+}
+static bool IsInstallerPath(string? path)
+{
+    if (path is null || !Path.GetFileName(path).StartsWith("KiYo-Setup", StringComparison.OrdinalIgnoreCase)) return false;
+    // Inno uses an 8.3 temporary path (RUNNER~1); compare the expanded path.
+    var expanded = new StringBuilder(32768);
+    if (Native.GetLongPathName(path, expanded, expanded.Capacity) == 0) return false;
+    return expanded.ToString().StartsWith(Path.GetTempPath(), StringComparison.OrdinalIgnoreCase);
 }
 static AutomationElement? InstallerWindow() => Dialog("KiYo");
 static AutomationElement? Find(AutomationElement window, string name) => window.FindFirst(TreeScope.Descendants,
@@ -200,6 +227,8 @@ void Capture(AutomationElement window, string name)
 }
 static class Native
 {
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    internal static extern uint GetLongPathName(string shortPath, StringBuilder longPath, int capacity);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool SetForegroundWindow(nint window);
 }

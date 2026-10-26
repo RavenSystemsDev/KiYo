@@ -35,6 +35,7 @@ jobs:
         shell: pwsh
         run: ./Windows/build-installer.ps1 -SkipPublish -Compiler "$env:RUNNER_TEMP/InnoSetup/ISCC.exe"
       - name: Installer lifecycle and UI tests
+        timeout-minutes: 5
         shell: pwsh
         run: dotnet run --project Windows/KiYo.Installer.Smoke/KiYo.Installer.Smoke.csproj -c Release -- "$pwd/Windows/artifacts/KiYo-Setup.exe" "$env:RUNNER_TEMP/kiyo-installer-checks"
       - uses: actions/upload-artifact@v4
