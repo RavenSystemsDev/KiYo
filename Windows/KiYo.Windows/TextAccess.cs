@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using KiYo.Core;
 using System.Windows.Automation;
 using System.Windows.Automation.Text;
 namespace KiYo.Windows;
@@ -56,27 +57,32 @@ internal static class TextAccess
         var selection = selections[0];
         if (expectedTail != null)
         {
-            if (!TailMatches(selection, expectedTail)) return null;
+            if (!TailMatches(pattern, selection, expectedTail)) return null;
             return new(window, Native.Focus(window), element, selection.Clone(), expectedTail, true);
         }
         var text = selection.GetText(8193);
         return text.Length is > 0 and <= 8192 ? new(window, Native.Focus(window), element, selection.Clone(), text, false) : null;
     }
-    private static bool TailMatches(TextPatternRange selection, string expected)
+    private static bool TailMatches(TextPattern pattern, TextPatternRange selection, string expected)
     {
+        if (expected.Length is < 1 or > TypingState.MaxPendingCharacters) return false;
         if (selection.CompareEndpoints(TextPatternRangeEndpoint.Start, selection, TextPatternRangeEndpoint.End) != 0) return false;
         var tail = selection.Clone();
         if (tail.MoveEndpointByUnit(TextPatternRangeEndpoint.Start, TextUnit.Character, -(expected.Length + 1)) == 0) return false;
         var visible = tail.GetText(expected.Length + 2);
-        return visible == expected || visible.Length == expected.Length + 1 && char.IsWhiteSpace(visible[0]) && visible[1..] == expected;
+        // Compare endpoints only; never read the complete document. An exact
+        // suffix without a preceding character is safe only at document start.
+        var atStart = tail.CompareEndpoints(TextPatternRangeEndpoint.Start, pattern.DocumentRange, TextPatternRangeEndpoint.Start) == 0;
+        return ObservedTail.Matches(visible, expected, atStart);
     }
     internal static bool StillSelected(TextSnapshot snapshot)
     {
         var element = Editable(snapshot.Window);
         if (element == null || !Automation.Compare(element, snapshot.Element)) return false;
-        var ranges = ((TextPattern)element.GetCurrentPattern(TextPattern.Pattern)).GetSelection();
+        var pattern = (TextPattern)element.GetCurrentPattern(TextPattern.Pattern);
+        var ranges = pattern.GetSelection();
         if (ranges.Length != 1 || !ranges[0].Compare(snapshot.Range)) return false;
         // UIA ranges are live. Equal endpoints alone do not prove unchanged text.
-        return snapshot.IsTail ? TailMatches(ranges[0], snapshot.Text) : ranges[0].GetText(8193) == snapshot.Text;
+        return snapshot.IsTail ? TailMatches(pattern, ranges[0], snapshot.Text) : ranges[0].GetText(8193) == snapshot.Text;
     }
 }

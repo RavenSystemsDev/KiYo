@@ -10,9 +10,13 @@ internal static class Fixture
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(nint window);
     private static string Body(string mode) => mode switch
     {
-        "burst" => "ghbdtn hi rfr ltkf ", "partial" => "ghbdtn r", _ => "ghbdtn "
+        "burst" => "ghbdtn hi rfr ltkf ", "partial" => "ghbdtn r",
+        "music-tail" => "usic ", "joined-ru" => "руддщ ", _ => "ghbdtn "
     };
-    private static string Prefix(string mode) => mode == "prefixed" ? "😀 untouched " : "";
+    private static string Prefix(string mode) => mode switch
+    {
+        "prefixed" => "😀 untouched ", "joined" or "music-tail" => "m", "joined-ru" => "р", _ => ""
+    };
     internal static void Run(string mode, string file)
     {
         var thread = new Thread(() =>
@@ -47,7 +51,7 @@ internal static class Fixture
     }
     internal static void Verify()
     {
-        foreach (var mode in new[] { "editable", "selected", "password", "readonly", "email", "burst", "partial", "prefixed", "changed", "caret" })
+        foreach (var mode in new[] { "editable", "selected", "password", "readonly", "email", "burst", "partial", "prefixed", "joined", "joined-ru", "music-tail", "changed", "caret" })
         {
             var file = Path.Combine(Path.GetTempPath(), "kiyo-uia-" + Guid.NewGuid());
             using var child = Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { ArgumentList = { "--fixture", mode, file }, UseShellExecute = false })!;
@@ -76,6 +80,16 @@ internal static class Fixture
                 {
                     if (snapshot != null) throw new Exception("Protected fixture accepted: " + mode);
                     Console.WriteLine("PASS: " + mode + " field rejected");
+                    continue;
+                }
+                if (mode is "joined" or "joined-ru" or "music-tail")
+                {
+                    if (snapshot != null) throw new Exception("Partial word accepted: " + mode);
+                    // Prove this is a boundary rejection in a supported editor,
+                    // not a false pass because the entire field was unreadable.
+                    var complete = TextAccess.Read(window, Prefix(mode) + Body(mode));
+                    if (complete == null || !TextAccess.StillSelected(complete)) throw new Exception("Full fixture word not readable: " + mode);
+                    Console.WriteLine("PASS: " + mode + " partial word rejected; complete word validated without injection");
                     continue;
                 }
                 if (snapshot == null || !TextAccess.StillSelected(snapshot)) throw new Exception("Editable fixture not supported: " + mode);

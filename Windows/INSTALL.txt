@@ -1,4 +1,4 @@
-KiYo for Windows 0.1.0-alpha.2 — Raven Systems
+KiYo for Windows 0.1.0-alpha.3 — Raven Systems
 
 ENGLISH
 Windows 11. Choose win-x64 for Intel/AMD PCs, win-arm64 for ARM PCs.

@@ -82,6 +82,39 @@ internal static class FastTypingTests
         Check(!schedule.Retry(2, 1000), "unsupported editor cannot retry indefinitely");
         Check(schedule.Expired(2140), "idle pending text expires");
 
+        // A partial observed word must never be rewritten leaving its prefix.
+        foreach (var (visible, observed) in new[] {
+            ("music ", "usic "), ("hello ", "ello "),
+            ("mghbdtn ", "ghbdtn "), ("рруддщ ", "руддщ "),
+            ("mghbdtn rfr ", "ghbdtn rfr ") })
+        {
+            Check(!ObservedTail.Matches(visible, observed, true), "unobserved first letter blocks partial replacement");
+            Check(!ObservedTail.Matches(visible, observed, false), "mid-document prefix blocks partial replacement");
+        }
+        foreach (var observed in new[] { "music ", "ghbdtn ", "руддщ ", "ghbdtn rfr ", "ghbdtn r" })
+        {
+            Check(ObservedTail.Matches(observed, observed, true), "complete observed input at document start");
+            Check(!ObservedTail.Matches(observed, observed, false), "provider omitted boundary away from document start");
+            foreach (var boundary in new[] { " ", "\t", "\n", "\u00A0" })
+                Check(ObservedTail.Matches(boundary + observed, observed, false), "known whitespace boundary permits complete word");
+        }
+        Check(!ObservedTail.Matches("", "", true), "empty observation is not a replacement target");
+        Check(!ObservedTail.Matches("ghbdtn ", "ghbdtn  ", true), "missing observed input is rejected");
+        Check(!ObservedTail.Matches(new string('a', 1025), new string('a', 1025), true), "oversized observation rejected");
+        foreach (var prefix in new[] { "m", "mm", "р" })
+        {
+            var interrupted = new Editor(20, false);
+            foreach (var c in prefix) interrupted.Key(c);
+            interrupted.State.Invalidate(); // Monitoring resumes halfway through a word.
+            foreach (var c in "ghbdtn ") { interrupted.Key(c); interrupted.Advance(5); }
+            interrupted.Advance(1500);
+            Equal(prefix + "ghbdtn ", interrupted.Text, "partial correction cannot leave an extra leading letter");
+            Check(!interrupted.State.HasPending, "rejected partial observation is retired");
+            foreach (var c in "ghbdtn ") { interrupted.Key(c); interrupted.Advance(5); }
+            interrupted.Advance(1500);
+            Equal(prefix + "ghbdtn привет ", interrupted.Text, "next complete word still corrects after prefix mismatch");
+        }
+
         // Virtual-time editor models physical keys, layout changes, and variable
         // provider delays. Exact final strings detect missing/reordered letters.
         var scenarios = new[] {
@@ -157,7 +190,8 @@ internal static class FastTypingTests
                 if (job != null && clock >= finish)
                 {
                     var done = job; job = null;
-                    var matching = Text.EndsWith(done.Attempt.Text, StringComparison.Ordinal);
+                    var readStart = Math.Max(0, Text.Length - done.Attempt.Text.Length - 1);
+                    var matching = ObservedTail.Matches(Text[readStart..], done.Attempt.Text, readStart == 0);
                     if (ReadFailures > 0) { ReadFailures--; matching = false; }
                     State.Remember(done);
                     if (State.Current(done.Attempt) && done.Changed)

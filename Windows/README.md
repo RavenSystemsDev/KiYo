@@ -1,4 +1,4 @@
-# KiYo for Windows — 0.1.0-alpha.2
+# KiYo for Windows — 0.1.0-alpha.3
 
 Development lives on the `windows` branch. macOS source and releases are on `main`.
 This is an initial Windows implementation, not a stable Windows release.
@@ -53,7 +53,11 @@ unchanged, and a layout switch is deferred until a completed-word boundary.
 The suffix is limited to 1024 characters, individual tokens to 64 characters.
 A mouse action, navigation, Backspace, external layout/focus change, paste, pause
 or setting change invalidates older candidates. UI Automation validates the field,
-selection and exact tail text again before returning. Replacement is one SendInput
+selection and exact tail text again before returning. A replacement requires a
+whitespace boundary before the observed suffix, or a confirmed document start.
+An incomplete word such as observed `usic` inside `music` is never replaced on its
+own. A provider that omits the preceding boundary is rejected rather than assumed
+to be at document start. Replacement is one SendInput
 batch with a final input-revision and native-focus check. Read failures back off
 and stop after five attempts for unchanged input; idle pending text expires after
 two seconds. An unresponsive provider keeps at most one outstanding call; typing
