@@ -101,7 +101,7 @@ try
     clickUpdate.GetAwaiter().GetResult();
     Check(State(window, "Launch when I sign in to Windows") == ToggleState.On, "Interactive update remembers autostart");
     Capture(window, "05-ready-en.png");
-    Click(window, "Close");
+    Click(window, "Close installer");
     WaitExit(installer, 0);
     Check(Process.GetProcessesByName("KiYo").Length == 0, "Close does not launch the app");
     Check(File.ReadAllText(preferences) == beforeUpdate, "Interactive update preserves preferences");

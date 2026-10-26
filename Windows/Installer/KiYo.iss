@@ -130,6 +130,8 @@ var Dialog: TSetupForm; Viewer: TRichEditViewer; Done: TNewButton; Content: Ansi
 begin
   Dialog := CreateCustomForm(620, 460, False, False);
   try
+    Dialog.ClientWidth := ScaleX(620);
+    Dialog.ClientHeight := ScaleY(460);
     Dialog.Caption := T('Лицензия KiYo', 'KiYo license');
     Viewer := TRichEditViewer.Create(Dialog);
     Viewer.Parent := Dialog;
@@ -138,7 +140,7 @@ begin
     Viewer.ScrollBars := ssVertical;
     Viewer.UseRichEdit := False;
     LoadStringFromFile(ExpandConstant('{tmp}\LICENSE'), Content);
-    Viewer.Text := String(Content);
+    Viewer.Text := Utf8Decode(Content);
     Done := TNewButton.Create(Dialog);
     Done.Parent := Dialog;
     Done.SetBounds(ScaleX(440), ScaleY(408), ScaleX(160), ScaleY(32));
@@ -167,6 +169,8 @@ var Dialog: TSetupForm; CaptionLabel: TNewStaticText; Browse, Done, Cancel: TNew
 begin
   Dialog := CreateCustomForm(460, 230, False, False);
   try
+    Dialog.ClientWidth := ScaleX(460);
+    Dialog.ClientHeight := ScaleY(230);
     Dialog.Caption := T('Параметры установки', 'Installation options');
     CaptionLabel := Text(Dialog, T('Папка установки', 'Installation folder'), 24, 24, 10);
     CaptionLabel.Alignment := taLeftJustify;
@@ -210,6 +214,9 @@ end;
 procedure CloseWithoutLaunch(Sender: TObject);
 begin
   LaunchWanted := False;
+  { Post-install checks are evaluated when the finish page is built. Clear the
+    actual RunList selection as well, so Close never starts the application. }
+  if WizardForm.RunList.Items.Count > 0 then WizardForm.RunList.Checked[0] := False;
   WizardForm.NextButton.OnClick(WizardForm.NextButton);
 end;
 
@@ -283,7 +290,7 @@ begin
   LicenseButton.Caption := T('Лицензия', 'License');
   LicenseButton.Font.Size := 9;
   LicenseButton.OnClick := @ShowLicense;
-  Agreement := Text(Surface, T('Устанавливая, вы принимаете', 'By installing, you accept the'), 551, 22, 8);
+  Agreement := Text(Surface, T('Условия установки:', 'Installation terms:'), 551, 22, 8);
   Agreement.Left := ScaleX(28);
   Agreement.Width := ScaleX(250);
   Agreement.Font.Color := Secondary;
@@ -306,18 +313,21 @@ begin
   TrayLogo.Stretch := True;
   TrayLogo.BackColor := $272523;
   TrayText := Text(TrayPanel, #$E70D, 20, 26, 16);
+  TrayText.Color := $272523;
   TrayText.Font.Name := 'Segoe MDL2 Assets';
   TrayText.SetBounds(ScaleX(30), ScaleY(18), ScaleX(32), ScaleY(30));
   TrayText := Text(TrayPanel, #$E701 + '   ' + #$E767, 22, 26, 15);
+  TrayText.Color := $272523;
   TrayText.Font.Name := 'Segoe MDL2 Assets';
   TrayText.SetBounds(ScaleX(158), ScaleY(22), ScaleX(88), ScaleY(26));
   TrayText := Text(TrayPanel, '14:27', 22, 26, 11);
+  TrayText.Color := $272523;
   TrayText.SetBounds(ScaleX(260), ScaleY(22), ScaleX(70), ScaleY(26));
   TrayHint := Text(Surface, T('Также ищите KiYo под стрелкой ⌃', 'KiYo may also be under the ⌃ arrow'), 388, 22, 9);
   TrayHint.Font.Color := Secondary;
   CloseButton := TNewButton.Create(WizardForm);
   PlaceButton(CloseButton, 510, 32);
-  CloseButton.Caption := T('Закрыть', 'Close');
+  CloseButton.Caption := T('Закрыть установщик', 'Close installer');
   CloseButton.OnClick := @CloseWithoutLaunch;
   Footer := Text(Surface, 'Raven Systems', 580, 18, 8);
   Footer.Font.Color := Secondary;
